@@ -30,25 +30,23 @@ services:
       # Format: http://check-url|https://dlin-uptime-kuma.fly.dev/api/push/TOKEN,...
       # Generate push tokens in the fly.io Kuma UI (Settings → Push monitors).
       - KUMA_MONITORS=${KUMA_MONITORS:-}
-    command: >
-      sh -c "
-        apk add --no-cache curl &&
-        cat > /check.sh << 'SCRIPT'
-        #!/bin/sh
-        for pair in $$(echo $$KUMA_MONITORS | tr ',' '\n'); do
-          check_url=$$(echo \"$$pair\" | cut -d'|' -f1)
-          push_url=$$(echo \"$$pair\" | cut -d'|' -f2)
-          if curl -fsS --max-time 5 \"$$check_url\" >/dev/null 2>&1; then
-            curl -fsS \"$$push_url?status=up&msg=OK\" >/dev/null 2>&1
-          else
-            curl -fsS \"$$push_url?status=down&msg=offline\" >/dev/null 2>&1
-          fi
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl
+        while true; do
+          for pair in $$(echo "$$KUMA_MONITORS" | tr ',' '\n'); do
+            check_url=$$(echo "$$pair" | cut -d'|' -f1)
+            push_url=$$(echo "$$pair" | cut -d'|' -f2)
+            if curl -fsS --max-time 5 "$$check_url" >/dev/null 2>&1; then
+              curl -fsS "$$push_url?status=up&msg=OK" >/dev/null 2>&1
+            else
+              curl -fsS "$$push_url?status=down&msg=offline" >/dev/null 2>&1
+            fi
+          done
+          sleep 60
         done
-        SCRIPT
-        chmod +x /check.sh &&
-        echo '* * * * * /check.sh' | crontab - &&
-        crond -f
-      "
     deploy:
       replicas: 1
       placement:
