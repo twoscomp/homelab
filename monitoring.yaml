@@ -1,0 +1,59 @@
+version: "3.9"
+
+# Monitoring stack
+# heartbeat-pusher: Checks each internal service URL every minute and
+# forwards status=up or status=down to the corresponding push endpoint on
+# the public fly.io Uptime Kuma instance. This replaces local Uptime Kuma
+# for internal service monitoring — the pusher only sends "up" when the
+# service actually responds, so a downed service causes fly.io Kuma to mark
+# it offline after the push interval expires.
+#
+# Prerequisites:
+#   1. Deploy the fly.io Uptime Kuma (see fly/uptime-kuma/fly.toml)
+#   2. In the fly.io Kuma UI, create Push-type monitors for each internal service
+#   3. Add KUMA_MONITORS to .env (see .env.orig for format)
+#
+# Deploy:
+#   docker-compose -f monitoring.yaml config | docker stack deploy -c - monitoring
+
+networks:
+  default:
+    name: smarthomeserver
+    external: true
+
+services:
+  heartbeat-pusher:
+    image: alpine:3.19
+    environment:
+      - TZ=${TZ}
+      # Comma-separated pairs of internal service check URL and fly.io push URL.
+      # Format: http://check-url|https://dlin-uptime-kuma.fly.dev/api/push/TOKEN,...
+      # Generate push tokens in the fly.io Kuma UI (Settings → Push monitors).
+      - KUMA_MONITORS=${KUMA_MONITORS:-}
+    command: >
+      sh -c "
+        apk add --no-cache curl &&
+        cat > /check.sh << 'SCRIPT'
+        #!/bin/sh
+        for pair in $$(echo $$KUMA_MONITORS | tr ',' '\n'); do
+          check_url=$$(echo \"$$pair\" | cut -d'|' -f1)
+          push_url=$$(echo \"$$pair\" | cut -d'|' -f2)
+          if curl -fsS --max-time 5 \"$$check_url\" >/dev/null 2>&1; then
+            curl -fsS \"$$push_url?status=up&msg=OK\" >/dev/null 2>&1
+          else
+            curl -fsS \"$$push_url?status=down&msg=offline\" >/dev/null 2>&1
+          fi
+        done
+        SCRIPT
+        chmod +x /check.sh &&
+        echo '* * * * * /check.sh' | crontab - &&
+        crond -f
+      "
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s

@@ -73,6 +73,30 @@ Docker Swarm stacks for homelab services running on Intel NUCs, integrated with 
 |---------|-------------|
 | Tesla HTTP Proxy | Tesla Fleet API proxy for Home Assistant |
 
+### monitoring.yaml - Uptime Monitoring
+| Service | Description |
+|---------|-------------|
+| heartbeat-pusher | Alpine cron container — checks internal services every minute and forwards heartbeats to the external fly.io Uptime Kuma |
+
+## External Services
+
+### fly/uptime-kuma — Public Status Page
+
+Uptime Kuma hosted on [fly.io](https://fly.io) at `https://dlin-uptime-kuma.fly.dev`, providing a public status page without requiring VPN or LAN access.
+
+- **Direct HTTP monitors**: Overseerr, Calibre, Komga, Plex (public `whatasave.space` URLs)
+- **Push monitors**: Sonarr, Radarr, Readarr, Bazarr, Prowlarr, QBT, NZBGet, Mylar, Teslamate, Maintainerr — heartbeats sent by `heartbeat-pusher` in `monitoring.yaml`
+- **Notifications**: Discord (`twosclub` and `twosclub Admins` webhooks), Email
+
+Initial deploy (one-time):
+```bash
+cd fly/uptime-kuma
+flyctl volumes create uptime_kuma_data --region ord --size 1
+flyctl deploy
+```
+
+After deploy: open the Kuma UI, create Push-type monitors for each internal service, copy the push tokens, and fill in `KUMA_MONITORS` in `.env`.
+
 ## Setup
 
 ### Prerequisites
@@ -89,6 +113,7 @@ TZ=America/Chicago
 PUID=1000
 PGID=1001
 PUID_APPS=568                # UID for app-specific containers (e.g. linuxserver)
+KUMA_MONITORS=               # Internal service check/push URL pairs for fly.io Uptime Kuma (see .env.orig)
 ```
 
 ### Deploy Stacks
@@ -99,6 +124,7 @@ docker-compose -f media.yaml config | docker stack deploy -c - media
 docker-compose -f security.yaml config | docker stack deploy -c - security
 docker-compose -f teslamate.yaml config | docker stack deploy -c - teslamate
 docker-compose -f docker-compose.yaml config | docker stack deploy -c - tesla
+docker-compose -f monitoring.yaml config | docker stack deploy -c - monitoring
 ```
 
 AdGuard Home is managed separately (not a Swarm stack):
