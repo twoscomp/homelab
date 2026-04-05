@@ -45,7 +45,7 @@ services:
               curl -fsS "$$push_url?status=down&msg=offline" >/dev/null 2>&1
             fi
           done
-          sleep 60
+          sleep 30
         done
     deploy:
       replicas: 1
