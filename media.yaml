@@ -48,9 +48,9 @@ volumes:
 services:
   overseerr:
     <<: *deploy-nuc
-    image: sctx/overseerr:latest
+    image: ghcr.io/seerr-team/seerr:latest
     container_name: overseerr
-    user: "568:1001"
+    init: true
     environment:
       - TZ=${TZ}
     volumes:
