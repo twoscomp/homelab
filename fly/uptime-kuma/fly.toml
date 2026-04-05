@@ -2,7 +2,7 @@ app = "dlin-uptime-kuma"
 primary_region = "ord"
 
 [build]
-  image = "louislam/uptime-kuma:1"
+  image = "louislam/uptime-kuma:2"
 
 [[mounts]]
   source = "uptime_kuma_data"
