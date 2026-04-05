@@ -2,32 +2,22 @@ app = "dlin-uptime-kuma"
 primary_region = "ord"
 
 [build]
-  image = "louislam/uptime-kuma:1"
+  image = "louislam/uptime-kuma:2"
 
 [[mounts]]
   source = "uptime_kuma_data"
   destination = "/app/data"
 
-# Uptime Kuma v2 uses socket.io which requires WebSocket support.
-# Using [[services]] instead of [http_service] to explicitly enable
-# WebSocket handler alongside HTTP.
-[[services]]
+[env]
+  # v2 defaults to localhost; fly-proxy requires 0.0.0.0
+  UPTIME_KUMA_HOST = "0.0.0.0"
+
+[http_service]
   internal_port = 3001
-  protocol = "tcp"
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    force_https = true
-
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
-
-  [services.concurrency]
-    type = "connections"
-    hard_limit = 25
-    soft_limit = 20
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
 
 [[vm]]
   memory = "256mb"
