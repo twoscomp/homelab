@@ -37,8 +37,8 @@ services:
         apk add --no-cache curl
         while true; do
           for pair in $$(echo "$$KUMA_MONITORS" | tr ',' '\n'); do
-            check_url=$$(echo "$$pair" | cut -d'|' -f1)
-            push_url=$$(echo "$$pair" | cut -d'|' -f2)
+            check_url="$${pair%%|*}"
+            push_url="$${pair##*|}"
             if curl -fsS --max-time 5 "$$check_url" >/dev/null 2>&1; then
               curl -fsS "$$push_url?status=up&msg=OK" >/dev/null 2>&1
             else
