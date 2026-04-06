@@ -184,9 +184,12 @@ services:
     volumes:
       - ${DATADIR}/epic-games/config:/usr/app/config
     deploy:
+      placement:
+        constraints:
+          - node.hostname == nuc8-1
       resources:
         limits:
-          memory: 2g
+          memory: 512m
 
   plex-meta-manager:
     image: kometateam/kometa:nightly
