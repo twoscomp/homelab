@@ -39,14 +39,17 @@ services:
         # Alpine busybox wget supports HTTPS natively (OpenSSL compiled in).
         while true; do
           for pair in $$(echo "$$KUMA_MONITORS" | tr ',' '\n'); do
-            check_url="$${pair%%|*}"
-            push_url="$${pair##*|}"
-            if wget -qO /dev/null --timeout=5 "$$check_url" 2>/dev/null; then
-              wget -qO /dev/null --timeout=10 "$$push_url?status=up&msg=OK" 2>/dev/null
-            else
-              wget -qO /dev/null --timeout=10 "$$push_url?status=down&msg=offline" 2>/dev/null
-            fi
+            (
+              check_url="$${pair%%|*}"
+              push_url="$${pair##*|}"
+              if wget -qO /dev/null --timeout=5 "$$check_url" 2>/dev/null; then
+                wget -qO /dev/null --timeout=10 "$$push_url?status=up&msg=OK" 2>/dev/null
+              else
+                wget -qO /dev/null --timeout=10 "$$push_url?status=down&msg=offline" 2>/dev/null
+              fi
+            ) &
           done
+          wait
           sleep 30
         done
     deploy:
