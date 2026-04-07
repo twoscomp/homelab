@@ -50,3 +50,18 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 ### Open Items
 - Monitor whether Sunday 3 AM Central scrub causes NFS-related HTTP latency alerts; add targeted weekly Kuma maintenance window if needed (`0 9 * * 7` UTC, 60 min)
 - Honeywell Lyric / Total Connect Comfort integrations log async coordinator warnings — cosmetic, not blocking
+
+## 2026-04-07
+
+### Review Findings
+- Discovered 14 internal monitors sporadically reporting DOWN alerts via Uptime Kuma on Fly.io.
+- Traced root cause to busybox `wget` hanging on TLS handshakes (`ssl_client` process hang) when connecting to the external Fly.io push endpoint, which prevented the heartbeat script loop from continuing.
+
+### Changes Made
+**heartbeat-pusher**
+- Modified `monitoring.yaml` to install and use `curl` for the external Uptime Kuma push requests to ensure robust TLS connection handling with explicit timeouts (`--connect-timeout 5`, `--max-time 10`).
+- Retained busybox `wget` (wrapped in a `timeout` command as an extra safeguard) strictly for the internal Swarm checks, since Alpine's `curl` (using `c-ares`) fails to resolve internal Docker Swarm DNS (`127.0.0.11`).
+- Redeployed the `monitoring` stack to `nuc8-1` to apply the loop fix, with all 14 monitors now consistently checking in without blocking.
+
+### Open Items
+- Next operational review scheduled for next week (approx. 2026-04-14) to monitor heartbeat-pusher stability and overall homelab performance metrics.
