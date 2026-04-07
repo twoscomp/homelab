@@ -34,18 +34,23 @@ services:
       - sh
       - -c
       - |
-        # Uses busybox wget exclusively — no apk installs, no startup delay.
-        # wget (musl resolver) resolves Docker Swarm service names via 127.0.0.11.
-        # Alpine busybox wget supports HTTPS natively (OpenSSL compiled in).
+        # Install curl for robust TLS connections to the external push URL.
+        # We MUST keep using busybox wget for the internal check URL because
+        # Alpine curl uses c-ares which fails to resolve Swarm DNS (127.0.0.11).
+        apk add --no-cache curl >/dev/null 2>&1
+        
         while true; do
           for pair in $$(echo "$$KUMA_MONITORS" | tr ',' '\n'); do
             (
               check_url="$${pair%%|*}"
               push_url="$${pair##*|}"
+              
+              # Internal Swarm DNS check: use busybox wget (wrapped in timeout just in case)
               if timeout 5 wget -qO /dev/null --timeout=5 "$$check_url" 2>/dev/null; then
-                timeout 10 wget -qO /dev/null --timeout=10 "$$push_url?status=up&msg=OK" 2>/dev/null
+                # External Fly.io HTTPS push: use curl to prevent busybox ssl_client hangs
+                curl -s -o /dev/null --connect-timeout 5 --max-time 10 "$$push_url?status=up&msg=OK"
               else
-                timeout 10 wget -qO /dev/null --timeout=10 "$$push_url?status=down&msg=offline" 2>/dev/null
+                curl -s -o /dev/null --connect-timeout 5 --max-time 10 "$$push_url?status=down&msg=offline"
               fi
             ) &
           done
