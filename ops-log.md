@@ -65,3 +65,19 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
 ### Open Items
 - Next operational review scheduled for next week (approx. 2026-04-14) to monitor heartbeat-pusher stability and overall homelab performance metrics.
+
+## 2026-04-11
+
+### Review Findings
+- **Sustained Outage (17:12 - 17:23 UTC)**: Massive homelab-wide connectivity drop impacting almost all services (Plex, Home Assistant, Calibre, QBT, etc.).
+- **DNS/Internal Resolution Failures**: Monitors reported "timeout exceeded" (48s) and "status code 502" (Bad Gateway), indicating internal Docker Swarm / NGINX Proxy Manager could not reach backends.
+- **QBT Isolated Outage**: QBT went "offline" first at 17:12:30, followed by the rest of the stack.
+- **Recovery**: Services began recovering around 17:23:18 UTC.
+- **Correlation**: No scheduled maintenance window (daily snapshots are at 08:00/09:00 UTC). Outage was during peak Saturday usage.
+
+### Changes Made
+- Manually ran `homelab-observer.py` to ingest and analyze the spike of 110 Kuma incidents.
+
+### Open Items
+- Investigate TrueNAS system logs around 17:12 UTC for storage-related hangs (ZFS latency, NFS kernel drops) that would cause the 502/timeout cascade.
+- Review QBT logs for potential memory leaks or connection surges that might have triggered the initial drop.

@@ -1,4 +1,605 @@
 {
-  "last_check": "2026-04-09 15:18:13",
-  "incidents": []
+  "last_check": "2026-04-11 18:27:38",
+  "incidents": [
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:12:56.047",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:13:05.592",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:13:10.361",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:13:13.029",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:13:13.396",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:13:21.801",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:13:27.056",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:13:36.520",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:13:56.048",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:14:07.362",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:14:10.361",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:14:13.030",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:14:13.396",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:14:21.801",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:14:27.058",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:14:38.093",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:14:56.049",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:15:08.662",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:15:10.360",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:15:13.030",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:15:13.397",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:15:21.801",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:15:27.059",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:15:39.528",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:15:56.049",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:16:10.264",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:16:10.361",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:16:13.030",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:16:13.398",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:16:21.802",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:16:27.060",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:16:40.884",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:16:56.050",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:17:10.361",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:17:11.599",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:17:13.031",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:17:13.398",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:17:21.802",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:17:27.061",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:17:42.322",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:17:56.052",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:18:10.361",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:18:13.032",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:18:13.099",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:18:13.399",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:18:21.802",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:18:27.062",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:18:43.750",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:18:56.053",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:19:10.362",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:19:13.033",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:19:13.399",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:19:14.470",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:19:21.802",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:19:27.063",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:19:45.226",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:19:56.054",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:20:10.362",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:20:13.034",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:20:13.400",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:20:16.010",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:20:21.805",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:20:27.063",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:20:46.757",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:20:56.054",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:21:10.362",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:21:13.035",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:21:13.400",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:21:17.336",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:21:21.805",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:21:27.063",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:21:47.702",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:21:56.055",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:22:10.363",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:22:13.036",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:22:13.400",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:22:18.095",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:22:21.805",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:22:27.063",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:22:48.328",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "QBT",
+      "time_utc": "2026-04-11 17:22:56.056",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Download Clients",
+      "time_utc": "2026-04-11 17:23:10.363",
+      "msg": "Child monitors down: QBT",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:23:13.037",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Plex",
+      "time_utc": "2026-04-11 17:23:13.401",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Home Assistant",
+      "time_utc": "2026-04-11 17:23:21.805",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:23:27.063",
+      "msg": "Child monitors down: Calibre, Plex",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:24:13.036",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:24:27.063",
+      "msg": "Child monitors down: Calibre",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:25:13.037",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:25:27.063",
+      "msg": "Child monitors down: Calibre",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:26:13.037",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:26:27.063",
+      "msg": "Child monitors down: Calibre",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:27:13.037",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:27:27.063",
+      "msg": "Child monitors down: Calibre",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:28:13.038",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:28:27.064",
+      "msg": "Child monitors down: Calibre",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:29:13.038",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:29:27.063",
+      "msg": "Child monitors down: Calibre",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Calibre",
+      "time_utc": "2026-04-11 17:30:13.039",
+      "msg": "Request failed with status code 502",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Media",
+      "time_utc": "2026-04-11 17:30:27.064",
+      "msg": "Child monitors down: Calibre",
+      "note": "Unexpected outage. Requires further investigation."
+    }
+  ]
 }
