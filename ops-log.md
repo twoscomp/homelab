@@ -98,8 +98,9 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 ### Automated Remediation (Approved)
 - **Monitoring Hardening**: Applied Level 3 remediation proposed by Senior SRE agent.
   - Switched `heartbeat-pusher` to `curlimages/curl:8.6.0` to eliminate `apk add` runtime delays.
-  - Added `dns: [1.1.1.1, 8.8.8.8]` fallback to pusher to ensure Fly.io connectivity during local DNS (AdGuard) failures.
+  - Added `dns: [1.1.1.1, 8.8.8.8]` fallback to pusher (later reverted due to UDM Pro reroute policy).
+  - Created "Sunday ZFS Scrub" maintenance window (Sun 08:00-10:00 UTC) via SQLite in Kuma DB.
   - Integrated `ops-log.md` tracking for all future automated actions.
 
 ### Open Items
-- **Manual Action Required**: Set a weekly maintenance window in Uptime Kuma UI for Sunday 3 AM Central (08:00 UTC) to suppress noise during ZFS pool scrubs.
+- Monitor the new maintenance window to ensure it correctly suppresses scrub-related alerts.
