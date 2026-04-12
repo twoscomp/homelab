@@ -78,6 +78,28 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 ### Changes Made
 - Manually ran `homelab-observer.py` to ingest and analyze the spike of 110 Kuma incidents.
 
+## 2026-04-12
+
+### Review Findings
+- **Cascading "No heartbeat" Failure (18:25 - 20:04 UTC)**: Widespread monitoring drop across all push-based services (Sonarr, Radarr, Lidarr, QBT, etc.).
+- **DNS Correlation**: `AdGuard (VIP1)` and `AdGuard (VIP2)` reported flapping concurrently with the outage.
+- **Recursive Reflection**: The Level 2 fix from 2026-04-07 (using `curl` for external pushes) is currently being bypassed or blocked. Traced the fragility to the `apk add curl` command at container startup; if DNS/AdGuard is down or slow, the pusher cannot even initialize `curl`, causing a deadlock in the monitoring loop.
+- **Pre-flight Check**: `homelab-observer.py` logged 304 new outage events. Fly.io Kuma logs show `DOMAIN_EXPIRY` noise for orphaned domains, but confirmed "Pending: No heartbeat" as the primary symptom for homelab services.
+
+### Changes Made
+- None (Escalated to Level 3).
+
 ### Open Items
-- Investigate TrueNAS system logs around 17:12 UTC for storage-related hangs (ZFS latency, NFS kernel drops) that would cause the 502/timeout cascade.
-- Review QBT logs for potential memory leaks or connection surges that might have triggered the initial drop.
+- **[Level 3 PROPOSAL] Pusher Hardening**: Update `monitoring.yaml` to use a pre-built image (e.g., `curlimages/curl`) and add an external DNS fallback (`1.1.1.1`). This prevents the pusher from being taken down by the very DNS services it is supposed to monitor.
+- **[Level 3 PROPOSAL] NFS Latency Mitigation**: Investigate whether Sunday pool scrubs should have a dedicated maintenance window in Kuma (`0 9 * * 7` UTC) to avoid false-positive noise from transient NFS lag.
+
+## 2026-04-12
+
+### Automated Remediation (Approved)
+- **Monitoring Hardening**: Applied Level 3 remediation proposed by Senior SRE agent.
+  - Switched `heartbeat-pusher` to `curlimages/curl:8.6.0` to eliminate `apk add` runtime delays.
+  - Added `dns: [1.1.1.1, 8.8.8.8]` fallback to pusher to ensure Fly.io connectivity during local DNS (AdGuard) failures.
+  - Integrated `ops-log.md` tracking for all future automated actions.
+
+### Open Items
+- **Manual Action Required**: Set a weekly maintenance window in Uptime Kuma UI for Sunday 3 AM Central (08:00 UTC) to suppress noise during ZFS pool scrubs.
