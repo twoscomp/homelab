@@ -24,9 +24,6 @@ networks:
 services:
   heartbeat-pusher:
     image: curlimages/curl:8.6.0
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
     environment:
       - TZ=${TZ}
       # Comma-separated pairs of internal service check URL and fly.io push URL.
