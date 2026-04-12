@@ -23,7 +23,10 @@ networks:
 
 services:
   heartbeat-pusher:
-    image: alpine:3.19
+    image: curlimages/curl:8.6.0
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       - TZ=${TZ}
       # Comma-separated pairs of internal service check URL and fly.io push URL.
@@ -34,10 +37,9 @@ services:
       - sh
       - -c
       - |
-        # Install curl for robust TLS connections to the external push URL.
         # We MUST keep using busybox wget for the internal check URL because
         # Alpine curl uses c-ares which fails to resolve Swarm DNS (127.0.0.11).
-        apk add --no-cache curl >/dev/null 2>&1
+        # curl (pre-installed) is used for robust TLS connections to Fly.io.
         
         while true; do
           for pair in $$(echo "$$KUMA_MONITORS" | tr ',' '\n'); do
