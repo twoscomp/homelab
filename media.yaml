@@ -42,7 +42,7 @@ volumes:
     driver: local
     driver_opts:
       type: nfs4
-      o: "addr=192.168.0.196"
+      o: "addr=192.168.0.196,soft,timeo=50,retrans=5,nolock"
       device: :/mnt/newton/media
 
 services:
