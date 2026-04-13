@@ -102,5 +102,32 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
   - Created "Sunday ZFS Scrub" maintenance window (Sun 08:00-10:00 UTC) via SQLite in Kuma DB.
   - Integrated `ops-log.md` tracking for all future automated actions.
 
+
+
+## 2026-04-13
+
+### Review Findings
+- **System Stability (00:05 UTC)**: System confirmed stable following the Level 3 remediation on 2026-04-12. Heartbeat pusher is performing correctly.
+- **Transient Incident**: QBT (TrueNAS app) missed a heartbeat at 23:42 UTC. Pre-flight check confirmed QBT is currently responsive (200 OK). No other services impacted; likely a transient network hiccup between the Swarm overlay and the TrueNAS host.
+- **Recursive Reflection**: Level 3 fix is holding. The pre-built `curlimages/curl` image has eliminated the initialization deadlock observed in previous cycles.
+- **CrowdSec Status**: `security_crowdsec` remains down (0/1). Local verification inhibited by lack of direct Swarm manager CLI access in this turn.
+
+### Changes Made
+- None (System stable).
+
 ### Open Items
-- Monitor the new maintenance window to ensure it correctly suppresses scrub-related alerts.
+- **[Long-term Fix] TrueNAS Monitoring**: Investigate adding a direct ICMP or TCP monitor for the TrueNAS host (192.168.0.101) to distinguish between QBT app failures and TrueNAS-wide outages.
+- **[Level 2/3] CrowdSec Recovery**: Schedule a manual recovery of the `security` stack to address the 4-week outage.
+
+
+## 2026-04-13 (Manual Intervention)
+
+### Review Findings
+- **CrowdSec Outage**: `security_crowdsec` was found in a "Complete" state (0/1 replicas) for 4 weeks. No logs were available for the prior failure.
+
+### Changes Made
+- Force-updated `security_crowdsec` service to trigger a fresh task.
+- Verified service is now "Running" on `nuc8-1`.
+
+### Open Items
+- Monitor CrowdSec logs for potential configuration errors or database corruption that might have caused the prior 4-week silent exit.
