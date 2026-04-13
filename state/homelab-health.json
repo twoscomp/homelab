@@ -1,604 +1,604 @@
 {
-  "last_check": "2026-04-11 18:27:38",
+  "last_check": "2026-04-13 02:08:17",
   "incidents": [
     {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:12:56.047",
+      "name": "ARR Apps",
+      "time_utc": "2026-04-12 18:35:10.681",
+      "msg": "Pending child monitors: Bazarr, Prowlarr",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Infrastructure",
+      "time_utc": "2026-04-12 18:35:27.222",
+      "msg": "Pending child monitors: AdGuard (VIP2)",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Mylar",
+      "time_utc": "2026-04-12 18:35:50.165",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Maintainerr",
+      "time_utc": "2026-04-12 18:35:50.211",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Radarr",
+      "time_utc": "2026-04-12 18:35:50.213",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Bazarr",
+      "time_utc": "2026-04-12 18:36:30.233",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "NZBGet",
+      "time_utc": "2026-04-12 18:36:30.243",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Prowlarr",
+      "time_utc": "2026-04-12 18:36:30.246",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "AdGuard (VIP1)",
+      "time_utc": "2026-04-12 18:36:30.247",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Bazarr",
+      "time_utc": "2026-04-12 18:38:21.179",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Prowlarr",
+      "time_utc": "2026-04-12 18:38:21.216",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Readarr",
+      "time_utc": "2026-04-12 18:38:21.219",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
       "name": "QBT",
-      "time_utc": "2026-04-11 17:13:05.592",
-      "msg": "offline",
+      "time_utc": "2026-04-12 18:38:51.530",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:13:10.361",
-      "msg": "Child monitors down: QBT",
+      "name": "Teslamate",
+      "time_utc": "2026-04-12 18:38:51.530",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:13:13.029",
-      "msg": "Request failed with status code 502",
+      "name": "NGINX Proxy Manager",
+      "time_utc": "2026-04-12 18:38:51.535",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:13:13.396",
-      "msg": "Request failed with status code 502",
+      "name": "Lidarr",
+      "time_utc": "2026-04-12 18:38:51.552",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:13:21.801",
-      "msg": "Request failed with status code 502",
+      "name": "Maintainerr",
+      "time_utc": "2026-04-12 18:40:11.743",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "AdGuard (VIP2)",
+      "time_utc": "2026-04-12 18:40:11.744",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Teslamate",
+      "time_utc": "2026-04-12 18:40:11.749",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Prowlarr",
+      "time_utc": "2026-04-12 18:40:11.751",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Mylar",
+      "time_utc": "2026-04-12 18:40:11.754",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Sonarr",
+      "time_utc": "2026-04-12 18:41:22.271",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "AdGuard (VIP1)",
+      "time_utc": "2026-04-12 18:41:22.291",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Lidarr",
+      "time_utc": "2026-04-12 18:41:22.298",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Infrastructure",
+      "time_utc": "2026-04-12 18:41:27.227",
+      "msg": "Pending child monitors: AdGuard (VIP1)",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
       "name": "Media",
-      "time_utc": "2026-04-11 17:13:27.056",
-      "msg": "Child monitors down: Calibre, Plex",
+      "time_utc": "2026-04-12 18:41:27.805",
+      "msg": "Pending child monitors: Lidarr",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:13:36.520",
-      "msg": "offline",
+      "name": "Readarr",
+      "time_utc": "2026-04-12 18:43:33.584",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:13:56.048",
+      "name": "Mylar",
+      "time_utc": "2026-04-12 18:44:07.926",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "ARR Apps",
+      "time_utc": "2026-04-12 18:44:10.688",
+      "msg": "Pending child monitors: Readarr, Mylar",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Bazarr",
+      "time_utc": "2026-04-12 18:44:11.553",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Sonarr",
+      "time_utc": "2026-04-12 18:44:51.600",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "ARR Apps",
+      "time_utc": "2026-04-12 18:45:10.688",
+      "msg": "Pending child monitors: Sonarr",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Lidarr",
+      "time_utc": "2026-04-12 18:45:32.308",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Mylar",
+      "time_utc": "2026-04-12 18:45:32.492",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Readarr",
+      "time_utc": "2026-04-12 18:46:12.259",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "AdGuard (VIP1)",
+      "time_utc": "2026-04-12 18:46:12.306",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Infrastructure",
+      "time_utc": "2026-04-12 18:46:27.231",
+      "msg": "Pending child monitors: AdGuard (VIP1)",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Radarr",
+      "time_utc": "2026-04-12 18:46:52.520",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
       "name": "QBT",
-      "time_utc": "2026-04-11 17:14:07.362",
-      "msg": "offline",
+      "time_utc": "2026-04-12 18:46:52.535",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Maintainerr",
+      "time_utc": "2026-04-12 18:46:52.551",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "ARR Apps",
+      "time_utc": "2026-04-12 18:47:10.689",
+      "msg": "Pending child monitors: Radarr, Maintainerr",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
       "name": "Download Clients",
-      "time_utc": "2026-04-11 17:14:10.361",
-      "msg": "Child monitors down: QBT",
+      "time_utc": "2026-04-12 18:47:11.226",
+      "msg": "Pending child monitors: QBT",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:14:13.030",
-      "msg": "Request failed with status code 502",
+      "name": "AdGuard (VIP1)",
+      "time_utc": "2026-04-12 18:48:12.986",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:14:13.396",
-      "msg": "Request failed with status code 502",
+      "name": "Mylar",
+      "time_utc": "2026-04-12 18:48:13.013",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:14:21.801",
-      "msg": "Request failed with status code 502",
+      "name": "Radarr",
+      "time_utc": "2026-04-12 18:48:13.016",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:14:27.058",
-      "msg": "Child monitors down: Calibre, Plex",
+      "name": "Bazarr",
+      "time_utc": "2026-04-12 18:48:43.286",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:14:38.093",
-      "msg": "offline",
+      "name": "Sonarr",
+      "time_utc": "2026-04-12 18:48:43.330",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:14:56.049",
+      "name": "Prowlarr",
+      "time_utc": "2026-04-12 18:48:43.340",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "ARR Apps",
+      "time_utc": "2026-04-12 18:49:10.690",
+      "msg": "Pending child monitors: Prowlarr",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "NZBGet",
+      "time_utc": "2026-04-12 18:49:23.508",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Mylar",
+      "time_utc": "2026-04-12 18:50:03.668",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "ARR Apps",
+      "time_utc": "2026-04-12 18:50:10.691",
+      "msg": "Pending child monitors: Mylar",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Lidarr",
+      "time_utc": "2026-04-12 18:50:43.665",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
       "name": "QBT",
-      "time_utc": "2026-04-11 17:15:08.662",
+      "time_utc": "2026-04-12 18:50:43.671",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Teslamate",
+      "time_utc": "2026-04-12 18:50:43.745",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Sonarr",
+      "time_utc": "2026-04-12 18:56:37.534",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Radarr",
+      "time_utc": "2026-04-12 18:56:37.627",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "AdGuard (VIP1)",
+      "time_utc": "2026-04-12 18:56:37.641",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Bazarr",
+      "time_utc": "2026-04-12 19:08:33.467",
       "msg": "offline",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:15:10.360",
-      "msg": "Child monitors down: QBT",
+      "name": "Bazarr",
+      "time_utc": "2026-04-12 19:08:58.404",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:15:13.030",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:15:13.397",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:15:21.801",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:15:27.059",
-      "msg": "Child monitors down: Calibre, Plex",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:15:39.528",
+      "name": "Mylar",
+      "time_utc": "2026-04-12 19:15:46.237",
       "msg": "offline",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:15:56.049",
+      "name": "ARR Apps",
+      "time_utc": "2026-04-12 19:16:10.709",
+      "msg": "Pending child monitors: Mylar",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Mylar",
+      "time_utc": "2026-04-12 19:16:12.033",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "AdGuard (VIP1)",
+      "time_utc": "2026-04-12 19:18:18.468",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Lidarr",
+      "time_utc": "2026-04-12 19:46:43.335",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Mylar",
+      "time_utc": "2026-04-12 19:46:43.374",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Radarr",
+      "time_utc": "2026-04-12 19:46:43.432",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Bazarr",
+      "time_utc": "2026-04-12 19:47:13.819",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "NGINX Proxy Manager",
+      "time_utc": "2026-04-12 19:47:13.823",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Teslamate",
+      "time_utc": "2026-04-12 19:51:25.980",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Bazarr",
+      "time_utc": "2026-04-12 19:51:26.062",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "AdGuard (VIP1)",
+      "time_utc": "2026-04-12 20:42:40.871",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "NGINX Proxy Manager",
+      "time_utc": "2026-04-12 20:50:21.014",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Teslamate",
+      "time_utc": "2026-04-12 20:50:21.043",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Prowlarr",
+      "time_utc": "2026-04-12 20:50:21.059",
+      "msg": "No heartbeat in the time window",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Maintainerr",
+      "time_utc": "2026-04-12 21:00:07.678",
+      "msg": "offline",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "ARR Apps",
+      "time_utc": "2026-04-12 21:00:10.768",
+      "msg": "Pending child monitors: Maintainerr",
+      "note": "Unexpected outage. Requires further investigation."
+    },
+    {
+      "name": "Maintainerr",
+      "time_utc": "2026-04-12 21:00:33.467",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
       "name": "QBT",
-      "time_utc": "2026-04-11 17:16:10.264",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:16:10.361",
-      "msg": "Child monitors down: QBT",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:16:13.030",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:16:13.398",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:16:21.802",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:16:27.060",
-      "msg": "Child monitors down: Calibre, Plex",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:16:40.884",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:16:56.050",
+      "time_utc": "2026-04-12 23:42:35.820",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:17:10.361",
-      "msg": "Child monitors down: QBT",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:17:11.599",
+      "name": "Mylar",
+      "time_utc": "2026-04-13 00:06:26.168",
       "msg": "offline",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:17:13.031",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:17:13.398",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:17:21.802",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:17:27.061",
-      "msg": "Child monitors down: Calibre, Plex",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:17:42.322",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:17:56.052",
+      "name": "Mylar",
+      "time_utc": "2026-04-13 00:06:51.916",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:18:10.361",
-      "msg": "Child monitors down: QBT",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:18:13.032",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:18:13.099",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:18:13.399",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:18:21.802",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:18:27.062",
-      "msg": "Child monitors down: Calibre, Plex",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:18:43.750",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:18:56.053",
+      "name": "Readarr",
+      "time_utc": "2026-04-13 00:49:37.068",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:19:10.362",
-      "msg": "Child monitors down: QBT",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:19:13.033",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:19:13.399",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:19:14.470",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:19:21.802",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:19:27.063",
-      "msg": "Child monitors down: Calibre, Plex",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:19:45.226",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:19:56.054",
+      "name": "Teslamate",
+      "time_utc": "2026-04-13 00:49:37.089",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:20:10.362",
-      "msg": "Child monitors down: QBT",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:20:13.034",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:20:13.400",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:20:16.010",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:20:21.805",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:20:27.063",
-      "msg": "Child monitors down: Calibre, Plex",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:20:46.757",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:20:56.054",
+      "name": "Readarr",
+      "time_utc": "2026-04-13 01:01:51.380",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:21:10.362",
-      "msg": "Child monitors down: QBT",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:21:13.035",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:21:13.400",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:21:17.336",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:21:21.805",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:21:27.063",
-      "msg": "Child monitors down: Calibre, Plex",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:21:47.702",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:21:56.055",
+      "name": "NZBGet",
+      "time_utc": "2026-04-13 01:02:21.786",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:22:10.363",
-      "msg": "Child monitors down: QBT",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:22:13.036",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:22:13.400",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:22:18.095",
+      "name": "Bazarr",
+      "time_utc": "2026-04-13 01:08:23.197",
       "msg": "offline",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:22:21.805",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:22:27.063",
-      "msg": "Child monitors down: Calibre, Plex",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:22:48.328",
-      "msg": "offline",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "QBT",
-      "time_utc": "2026-04-11 17:22:56.056",
+      "name": "Bazarr",
+      "time_utc": "2026-04-13 01:08:48.969",
       "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Download Clients",
-      "time_utc": "2026-04-11 17:23:10.363",
-      "msg": "Child monitors down: QBT",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:23:13.037",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Plex",
-      "time_utc": "2026-04-11 17:23:13.401",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Home Assistant",
-      "time_utc": "2026-04-11 17:23:21.805",
-      "msg": "Request failed with status code 502",
+      "name": "Overseerr",
+      "time_utc": "2026-04-13 01:09:12.177",
+      "msg": "Request failed with status code 530",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
       "name": "Media",
-      "time_utc": "2026-04-11 17:23:27.063",
-      "msg": "Child monitors down: Calibre, Plex",
+      "time_utc": "2026-04-13 01:09:27.988",
+      "msg": "Pending child monitors: Overseerr",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:24:13.036",
-      "msg": "Request failed with status code 502",
+      "name": "AdGuard (VIP2)",
+      "time_utc": "2026-04-13 01:16:29.970",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:24:27.063",
-      "msg": "Child monitors down: Calibre",
+      "name": "Mylar",
+      "time_utc": "2026-04-13 01:16:30.005",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:25:13.037",
-      "msg": "Request failed with status code 502",
+      "name": "Bazarr",
+      "time_utc": "2026-04-13 01:17:00.552",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:25:27.063",
-      "msg": "Child monitors down: Calibre",
+      "name": "Teslamate",
+      "time_utc": "2026-04-13 01:17:02.507",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:26:13.037",
-      "msg": "Request failed with status code 502",
+      "name": "ARR Apps",
+      "time_utc": "2026-04-13 01:17:10.900",
+      "msg": "Pending child monitors: Bazarr",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:26:27.063",
-      "msg": "Child monitors down: Calibre",
+      "name": "Mylar",
+      "time_utc": "2026-04-13 01:58:33.181",
+      "msg": "offline",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:27:13.037",
-      "msg": "Request failed with status code 502",
+      "name": "Mylar",
+      "time_utc": "2026-04-13 01:58:58.867",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:27:27.063",
-      "msg": "Child monitors down: Calibre",
+      "name": "Mylar",
+      "time_utc": "2026-04-13 02:07:43.017",
+      "msg": "offline",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:28:13.038",
-      "msg": "Request failed with status code 502",
+      "name": "ARR Apps",
+      "time_utc": "2026-04-13 02:08:10.924",
+      "msg": "Pending child monitors: Mylar",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:28:27.064",
-      "msg": "Child monitors down: Calibre",
+      "name": "Mylar",
+      "time_utc": "2026-04-13 02:08:12.556",
+      "msg": "No heartbeat in the time window",
       "note": "Unexpected outage. Requires further investigation."
     },
     {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:29:13.038",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:29:27.063",
-      "msg": "Child monitors down: Calibre",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Calibre",
-      "time_utc": "2026-04-11 17:30:13.039",
-      "msg": "Request failed with status code 502",
-      "note": "Unexpected outage. Requires further investigation."
-    },
-    {
-      "name": "Media",
-      "time_utc": "2026-04-11 17:30:27.064",
-      "msg": "Child monitors down: Calibre",
+      "name": "Bazarr",
+      "time_utc": "2026-04-13 02:08:13.348",
+      "msg": "offline",
       "note": "Unexpected outage. Requires further investigation."
     }
   ]
