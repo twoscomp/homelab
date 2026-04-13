@@ -143,3 +143,10 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
   - **Group**: Added to "Infrastructure" (Group ID: 25).
   - **Maintenance**: Linked to "Sunday ZFS Scrub" window to prevent noise.
   - **Notifications**: Cloned notification settings from "ARR Apps" (Monitor ID: 1).
+
+### Automated Remediation (Approved)
+- **TrueNAS Host Monitoring (Pusher Implementation)**: Corrected the monitoring architecture for local TrueNAS tracking.
+  - **The Fix**: Switched from a direct Kuma check (which cannot reach local IPs) to a **Push-type** monitor.
+  - **Monitor**: "TrueNAS SMB (Pusher)" (ID: 28).
+  - **Local Action**: Updated the `heartbeat-pusher` configuration on `nuc8-1` to perform a `tcp://192.168.0.196:445` check locally and push the result to Fly.io.
+  - **Status**: Monitor is now correctly receiving heartbeats from within the network. Legacy direct monitor (ID: 27) disabled.
