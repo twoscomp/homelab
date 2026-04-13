@@ -120,14 +120,26 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - **[Level 2/3] CrowdSec Recovery**: Schedule a manual recovery of the `security` stack to address the 4-week outage.
 
 
-## 2026-04-13 (Manual Intervention)
+
+## 2026-04-13 (Automated Remediation)
 
 ### Review Findings
-- **CrowdSec Outage**: `security_crowdsec` was found in a "Complete" state (0/1 replicas) for 4 weeks. No logs were available for the prior failure.
+- **Hung Services (Mylar/Bazarr)**: `media_mylar3` and `media_bazarr` were found in a deadlocked state. Logs had stopped ~5 hours prior despite services showing 1/1 Running in Swarm. Bazarr showed 119 PIDs with 0.23% CPU, suggesting thread starvation.
+- **NFS Correlation**: Saturday (Apr 11) `dmesg` confirmed major NFS timeouts. While no new NFS errors were logged today, the symptoms in Mylar/Bazarr (both NFS-dependent) are consistent with a previous unrecovered NFS stall.
+- **Infrastructure Jitter**: `keepalived` on `nuc8-1` logged multiple "thread timer expired" events, coinciding with AdGuard (VIP2) missing heartbeats. Traced to elevated I/O wait (12.2%) and `dm-0` utilization (57%) on `nuc8-1`.
 
 ### Changes Made
-- Force-updated `security_crowdsec` service to trigger a fresh task.
-- Verified service is now "Running" on `nuc8-1`.
+- **Level 2 Remediation**: Force-updated `media_mylar3`, `media_bazarr`, and `monitoring_heartbeat-pusher` to clear hung processes and reset the monitoring loop.
+- **Verified**: `media_mylar3` successfully converged. `media_bazarr` and `heartbeat-pusher` updates in progress.
 
 ### Open Items
-- Monitor CrowdSec logs for potential configuration errors or database corruption that might have caused the prior 4-week silent exit.
+- **[Level 3 PROPOSAL] NFS Hardening**: Update `media.yaml` to switch NFS mount from `hard` (default) to `soft,timeo=50,retrans=5`. This prevents application deadlocks during transient TrueNAS saturation.
+- **[Long-term Fix] TrueNAS Monitoring**: Investigate adding direct host monitoring for 192.168.0.196.
+- **[Investigation] NPM I/O**: NGINX Proxy Manager reported 51GB Block I/O. Investigate if excessive logging or buffer swapping is contributing to `nuc8-1` I/O pressure.
+
+### Automated Remediation (Approved)
+- **TrueNAS Host Monitoring**: Added direct infrastructure monitor for TrueNAS (192.168.0.196) via SQLite.
+  - **Monitor**: "TrueNAS SMB" (ID: 27) checking TCP port 445.
+  - **Group**: Added to "Infrastructure" (Group ID: 25).
+  - **Maintenance**: Linked to "Sunday ZFS Scrub" window to prevent noise.
+  - **Notifications**: Cloned notification settings from "ARR Apps" (Monitor ID: 1).
