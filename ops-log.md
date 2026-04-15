@@ -430,3 +430,58 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
     - Pinned Bazarr and Maintainerr to nuc8-1.
 - **[Gateway] Network Hardening**:
     - Disabled mDNS (discovery.mdns.mode=off) in OpenClaw config to mitigate TrueNAS network bridge instability.
+
+---
+
+## 2026-04-15 (Session — Human-Directed Changes)
+
+### Heartbeat Monitor Parallelization
+- **Root cause**: Heartbeat script ran 14 monitor checks sequentially; worst-case 14×15s = 3.5 min exceeded the 60s heartbeat window, causing periodic group false-DOWN alerts overnight.
+- **Fix**: Rewrote the inner loop in `monitoring.yaml` to spawn each monitor check as a background subshell (`( ... ) &`) followed by `wait`, so all 14 checks run concurrently. Worst-case cycle time dropped from ~210s to ~45s.
+- Committed, pushed, and deployed to `nuc8-1`.
+
+### Uptime Kuma Monitor Visibility Fixes
+- **Problem**: Infrastructure and Tautulli monitors not appearing in Kuma dashboard. Root causes:
+  1. Monitors created with `user_id=NULL` — silently hidden from UI. Fixed by updating all affected rows to `user_id=1`.
+  2. Groups created with minimal `INSERT` — missing fields prevented children from rendering. Recreated Infrastructure group by cloning full ARR Apps row.
+- **Lesson learned**: Always `user_id=1` on any direct DB insert; always clone full existing group row for new groups. Added to `CLAUDE.md`.
+
+### Home Assistant — Wife's Phone Update
+- Updated device references from `SM-F731U1` / `sm_f731u1` → `SM-F741U1` / `sm_f741u1` on TrueNAS HA config:
+  - `/mnt/newton/appdata/homeassistant/templates/template.yaml` (2 occurrences)
+  - `/mnt/newton/appdata/homeassistant/automations.yaml` (4 occurrences)
+- YAML only — `.storage/` JSON state files left untouched.
+
+### LLM Documentation (AGENTS.md + CLAUDE.md)
+- Created `AGENTS.md`: cross-LLM operational SOP covering full infrastructure topology, Docker Swarm deploy nuances (docker-compose v1 only, stack DNS naming, never hardcode secrets), monitoring architecture, ops review SOP, and known issues.
+- Created `CLAUDE.md`: lean Claude Code auto-loaded conventions referencing `AGENTS.md`, covering deploy commands, Kuma DB insertion rules, Alpine wget-not-curl guidance.
+
+### New Services Deployed
+
+**Tracearr** (unified Plex + Jellyfin stream monitoring)
+- Added 3 containers to `media` stack: `tracearr` (app), `tracearr-db` (TimescaleDB pg18.1-ts2.25.0), `tracearr-redis` (Redis 8-alpine).
+- Named Docker volumes for PostgreSQL (`tracearr_timescale_data`, `tracearr_redis_data`) — bind mount unsupported due to PostgreSQL `0700` permission requirement.
+- All 3 pinned to `nuc8-1` via `*deploy-nuc` anchor.
+- Secrets added to `.env`: `TRACEARR_JWT_SECRET`, `TRACEARR_COOKIE_SECRET`, `TRACEARR_DB_PASSWORD`.
+- NPM proxy host (id=64): `tracearr.swarm.localdomain` + `tracearr.whatasave.space` → `media_tracearr:3000`. SSL to be added after Cloudflare Tunnel route is configured.
+- Uptime Kuma HTTP monitor targeting `https://tracearr.whatasave.space` added to Media group (twosclub status page).
+
+**Jellyfin monitor**
+- Jellyfin was already deployed on TrueNAS (192.168.0.196:30013). Added Kuma HTTP monitor for `https://jellyfin.whatasave.space`.
+- NPM proxy host (id=63): `jellyfin.swarm.localdomain` + `jellyfin.whatasave.space` → `192.168.0.196:30013`.
+- Added to Media / twosclub status page.
+
+### NPM Crash Loop — Root Cause and Fix
+- **Symptom**: NPM exiting with code 137 (OOM kill / health check kill), UI inaccessible, cert renewal failures logged.
+- **Root cause**: `30-ownership.sh` in S6 overlay runs `chown -R $PUID:$PGID /data /etc/letsencrypt` at startup. On GlusterFS (`fuse.glusterfs`), recursive chown of large directories can take 8+ minutes. Health check kills the container before it finishes.
+- **Fix**: Set `S6_STAGE2_HOOK: truncate -s 0 /etc/s6-overlay/s6-rc.d/prepare/30-ownership.sh` in `tier1.yaml`. This zeros the script before S6 runs it, skipping the chown entirely.
+- **Key lesson**: `S6_STAGE2_HOOK` is executed by `execlineb` (not bash) — shell redirects (`>`, `>>`) silently produce literal output. Only direct commands (like `truncate`) work. Intermediate attempts with `sed` and `printf '#!/bin/sh\n' >` both failed for this reason.
+- NPM now starts in ~14 seconds. Applied `start_period: 600s` to health check as additional buffer.
+
+### grafana.whatasave.space Certificate Cleanup
+- Grafana is no longer proxied via NPM. Certificate (id=4) was causing hourly renewal failures.
+- **Method**: Scaled NPM to 0 (required to release SQLite write lock), then:
+  - Soft-deleted cert id=4 in NPM DB (`is_deleted=1`).
+  - Removed letsencrypt files: `live/npm-4/`, `archive/npm-4/`, `renewal/npm-4.conf`.
+- Scaled NPM back to 1. Proxy host id=10 (grafana.whatasave.space) was already soft-deleted previously.
+- **Lesson learned**: NPM holds an exclusive SQLite write lock while running. Direct DB writes require scaling the service to 0 first. The NPM REST API is the preferred approach if admin credentials are known.
