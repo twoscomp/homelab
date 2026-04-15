@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
     environment:
       TZ: America/Chicago
-      S6_STAGE2_HOOK: sed -i -e $$d -e $$d /etc/s6-overlay/s6-rc.d/prepare/30-ownership.sh
+      S6_STAGE2_HOOK: "printf '#!/bin/sh\\n' > /etc/s6-overlay/s6-rc.d/prepare/30-ownership.sh"
     ports:
       - '80:80'
       - '81:81'
