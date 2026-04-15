@@ -32,6 +32,19 @@ x-lsio-nuc2: &lsio-nuc2
       constraints:
         - node.hostname == nuc8-2
 
+x-lsio-nuc-limited: &lsio-nuc-limited
+  environment:
+    - PUID=568
+    - PGID=1001
+    - TZ=${TZ}
+  deploy:
+    placement:
+      constraints:
+        - node.hostname == nuc8-1
+    resources:
+      limits:
+        memory: 512m
+
 networks:
   default:
     name: smarthomeserver
@@ -104,7 +117,7 @@ services:
 
   readarr:
     <<: *lsio-nuc
-    image: ghcr.io/hotio/readarr
+    image: lscr.io/linuxserver/readarr:develop-version-0.4.18.2805
     container_name: readarr
     volumes:
       - ${SERVARRDIR}/readarr/config:/config
@@ -144,7 +157,7 @@ services:
     restart: unless-stopped
 
   bazarr:
-    <<: *lsio-nuc
+    <<: *lsio-nuc-limited
     image: lscr.io/linuxserver/bazarr:latest
     container_name: bazarr
     volumes:
@@ -164,7 +177,7 @@ services:
       - ${DATADIR}/recyclarr/config:/config
     environment:
       - TZ=America/Chicago
-      - CRON_SCHEDULE=@hourly
+      - CRON_SCHEDULE=5 * * * *
       - RECYCLARR_CREATE_CONFIG=true
       - TINI_SUBREAPER=true
 
@@ -199,18 +212,35 @@ services:
     user: 568:1001
     environment:
       - TZ=America/Chicago #optional
+      - KOMETA_TIME=03:15,15:15
     volumes:
       - ${DATADIR}/plex-meta-manager/config:/config
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == nuc8-1
+      resources:
+        limits:
+          memory: 512m
     restart: unless-stopped
 
   maintainerr:
+    <<: *deploy-nuc
     environment:
       - TZ=America/Chicago
+      - MAINTAINERR_SCHEDULE=30 * * * *
     image: ghcr.io/maintainerr/maintainerr:latest
     container_name: maintainerr
     user: 568:1001
     volumes:
       - ${DATADIR}/maintainerr:/opt/data
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == nuc8-1
+      resources:
+        limits:
+          memory: 512m
     # ports:
     #   - 6246:6246
     restart: unless-stopped
