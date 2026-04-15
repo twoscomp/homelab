@@ -44,6 +44,8 @@ volumes:
       type: nfs4
       o: "addr=192.168.0.196,soft,timeo=50,retrans=5,nolock"
       device: :/mnt/newton/media
+  tracearr_timescale_data:
+  tracearr_redis_data:
 
 services:
   overseerr:
@@ -212,3 +214,31 @@ services:
     # ports:
     #   - 6246:6246
     restart: unless-stopped
+
+  tracearr-db:
+    <<: *deploy-nuc
+    image: timescale/timescaledb-ha:pg18-latest
+    environment:
+      POSTGRES_USER: tracearr
+      POSTGRES_PASSWORD: ${TRACEARR_DB_PASSWORD}
+      POSTGRES_DB: tracearr
+    volumes:
+      - tracearr_timescale_data:/home/postgres/pgdata/data
+
+  tracearr-redis:
+    <<: *deploy-nuc
+    image: redis:8-alpine
+    volumes:
+      - tracearr_redis_data:/data
+
+  tracearr:
+    <<: *deploy-nuc
+    image: ghcr.io/connorgallopo/tracearr:latest
+    environment:
+      TZ: ${TZ}
+      DATABASE_URL: postgres://tracearr:${TRACEARR_DB_PASSWORD}@media_tracearr-db:5432/tracearr
+      REDIS_URL: redis://media_tracearr-redis:6379
+      JWT_SECRET: ${TRACEARR_JWT_SECRET}
+      COOKIE_SECRET: ${TRACEARR_COOKIE_SECRET}
+    volumes:
+      - ${DATADIR}/tracearr/backup:/data/backup
