@@ -247,7 +247,7 @@ services:
 
   tracearr-db:
     <<: *deploy-nuc
-    image: timescale/timescaledb-ha:pg18-latest
+    image: timescale/timescaledb-ha:pg18.1-ts2.25.0
     environment:
       POSTGRES_USER: tracearr
       POSTGRES_PASSWORD: ${TRACEARR_DB_PASSWORD}
