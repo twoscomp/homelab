@@ -16,32 +16,32 @@ services:
       - -c
       - |
         while true; do
-          echo "[$(date)] Starting heartbeat loop..."
-          for pair in $(echo "$KUMA_MONITORS" | tr ',' '\n'); do
+          echo "[$$(date)] Starting heartbeat loop..."
+          for pair in $$(echo "$$KUMA_MONITORS" | tr ',' '\n'); do
             (
-              check_url="${pair%%|*}"
-              push_url="${pair##*|}"
-              
+              check_url="$${pair%%|*}"
+              push_url="$${pair##*|}"
+
               status="down"
-              if echo "$check_url" | grep -q "^tcp://"; then
-                host_port="${check_url#tcp://}"
-                host="${host_port%%:*}"
-                port="${host_port##*:}"
-                if timeout 15 nc -z "$host" "$port" 2>/dev/null; then
+              if echo "$$check_url" | grep -q "^tcp://"; then
+                host_port="$${check_url#tcp://}"
+                host="$${host_port%%:*}"
+                port="$${host_port##*:}"
+                if timeout 15 nc -z "$$host" "$$port" 2>/dev/null; then
                   status="up"
                 fi
               else
-                if timeout 15 wget -qO /dev/null --timeout=15 "$check_url" 2>/dev/null; then
+                if timeout 15 wget -qO /dev/null --timeout=15 "$$check_url" 2>/dev/null; then
                   status="up"
                 fi
               fi
 
-              if [ "$status" = "up" ]; then
-                echo "UP: $check_url"
-                curl -s -o /dev/null --connect-timeout 5 --max-time 10 "$push_url?status=up&msg=OK"
+              if [ "$$status" = "up" ]; then
+                echo "UP: $$check_url"
+                curl -s -o /dev/null --connect-timeout 5 --max-time 10 "$$push_url?status=up&msg=OK"
               else
-                echo "DOWN: $check_url"
-                curl -s -o /dev/null --connect-timeout 5 --max-time 10 "$push_url?status=down&msg=offline"
+                echo "DOWN: $$check_url"
+                curl -s -o /dev/null --connect-timeout 5 --max-time 10 "$$push_url?status=down&msg=offline"
               fi
             ) &
           done
