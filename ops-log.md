@@ -3,6 +3,43 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-04-15 (Session — Sesame Street Import)
+
+### Problem
+Sesame Street S01-S54 mega collection (~4500 episodes) downloaded to TrueNAS torrent directory.
+Plex unable to scan/import the full collection at once. Goal: populate Sonarr library path
+manually, then trigger rescan.
+
+### Approach
+Attempted hard links (`ln`) from torrent dir to library dir. Blocked by Linux
+`protected_hardlinks=1` (sysctl): torrent files owned by `apps`, running as `dlin` with read-only
+access — kernel rejects link() calls for files you don't own without write permission.
+
+Both paths confirmed same ZFS dataset (`newton/media`, device ID 68) — not a cross-device issue.
+
+Used **symlinks** (`ln -s`) instead:
+- Destination directories writable by `apps-plus` group (dlin is a member)
+- Symlinks work for both Plex and Sonarr scanning
+- When Sonarr later renames/reimports (runs as `apps`, owns the torrent files), it will replace
+  symlinks with proper hard links
+
+### Changes Made
+- Cleared existing Season 01–54 content from:
+  `/mnt/newton/media/media/tv/Sesame Street (1969) {imdb-tt0063951}/`
+- Created 4532 symlinks pointing at:
+  `/mnt/newton/media/torrent/tv/Sesame Street S01-S54 Mega Collection TELETAPE MiXED PARTIAL American Archive of Public Broadcasting PLEX-EMBY Renamed and Organized/Season XX/`
+- Triggered Sonarr RescanSeries (series id=604) via API — command id 3425432, status: queued
+
+### Sonarr API Note
+Sonarr has no published host port. Must reach via overlay network from another container:
+`docker exec media_tracearr.1.<id> wget -qO- 'http://media_sonarr:8989/api/v3/...'`
+
+### Next Steps
+- Verify Sonarr shows episodes as downloaded after rescan completes
+- Trigger Plex library scan for TV
+- Optional: bulk rename in Sonarr (Series → Sesame Street → Rename Episodes) to normalize
+  filenames; this will replace symlinks with proper hard links
+
 ---
 
 ## 2026-04-06
