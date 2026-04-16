@@ -3,11 +3,53 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
-## 2026-04-15 (Session — Sesame Street Import)
+## 2026-04-16 (Session — Sesame Street Hard Link Import)
 
 ### Problem
 Sesame Street S01-S54 mega collection (~4500 episodes) downloaded to TrueNAS torrent directory.
 Plex unable to scan/import the full collection at once. Goal: populate Sonarr library path
+via hard links to preserve seeding.
+
+### Approaches tried and why they failed
+1. **Hard link as `dlin` directly on TrueNAS** — blocked by `protected_hardlinks=1`. Torrent
+   files owned by `apps` (uid=568); dlin only has read access → kernel rejects link() calls.
+2. **Symlinks (relative)** — Sonarr's RescanSeries follows symlinks through NFS, which returns
+   the server-side canonical path (`/mnt/newton/media/...`). That path doesn't exist inside
+   the container (mounted at `/data`) → FileNotFoundException in ImportDecisionMaker.
+3. **Sonarr DownloadedEpisodesScan** — same NFS symlink issue; additionally hit a Sonarr bug
+   where GetDecision() throws FileNotFoundException when destination doesn't exist yet, treating
+   it as fatal rather than "proceed with import". Ran for 44 minutes, imported nothing.
+4. **Sonarr ManualImport API (GET+POST)** — GET skips folders >100 files when series can't be
+   determined from folder name alone. Season 01 (5 files) imported successfully but Sonarr
+   hard-linked then deleted the source (standard completed-download behavior) — seeding broken
+   for those 5 episodes. Seasons 30+ POST appeared to succeed but nothing landed.
+5. **docker exec into Sonarr container** — would run as apps/568 (correct), but Sonarr
+   container mounts media via NFS; hard links over NFS add unnecessary complexity.
+
+### Solution
+`sudo -u apps bash` directly on TrueNAS — runs as uid=568 (file owner), purely local ZFS
+operations, no NFS in the hard link path.
+
+### Changes Made
+- Hard linked 4527 files from torrent collection to TV library:
+  - Source: `/mnt/newton/media/torrent/tv/Sesame Street S01-S54 Mega Collection.../Season XX/`
+  - Dest: `/mnt/newton/media/tv/Sesame Street (1969) {imdb-tt0063951}/Season XX/`
+  - Verified: nlinks=2, same inode on both sides. 0 failures.
+- Restored Season 01 seeding: hard linked 5 library files back to torrent dir with original
+  filenames (Sonarr had moved/renamed them during earlier failed import attempt).
+- Sonarr RescanSeries left running in background (slow due to media analysis over NFS);
+  not required — Plex and Jellyfin scan the library directory directly.
+
+### Key Lessons
+- `protected_hardlinks=1` on TrueNAS blocks link() for non-owners even on same ZFS dataset.
+  Use `sudo -u apps` when the files are owned by the `apps` user.
+- Sonarr's RescanSeries works fine for real files but breaks for NFS-resolved symlinks.
+- Sonarr DownloadedEpisodesScan / ManualImport delete the source after import — not suitable
+  when seeding preservation is required.
+- For bulk imports preserving seeding: hard link directly to the library path, let Plex/
+  Jellyfin discover via their own library scans.
+
+## 2026-04-15 (Session — Sesame Street Import)
 manually, then trigger rescan.
 
 ### Approach
