@@ -557,6 +557,42 @@ Sonarr has no published host port. Must reach via overlay network from another c
 - **Key lesson**: `S6_STAGE2_HOOK` is executed by `execlineb` (not bash) — shell redirects (`>`, `>>`) silently produce literal output. Only direct commands (like `truncate`) work. Intermediate attempts with `sed` and `printf '#!/bin/sh\n' >` both failed for this reason.
 - NPM now starts in ~14 seconds. Applied `start_period: 600s` to health check as additional buffer.
 
+---
+
+## 2026-04-23 — Ops Review: NPM & AdGuard; Tautulli Debug
+
+### Tautulli — Plex Auth Token Expired (since ~2026-04-05)
+
+- **Symptom**: Tautulli returning 401 on all plex.tv API calls (`/api/v2/ping`, `/api/resources`, `/users/account`). Local PMS connection (192.168.0.196:32400) and library refresh still worked. Broken since ~April 5.
+- **Root cause**: Plex auth token stored in Tautulli (`pms_token`) was invalidated on plex.tv (likely password change or session revocation).
+- **Fix**: Re-authenticated via Tautulli UI → Settings → Plex Media Server → Sign in with Plex.
+- **Secondary issue**: Tautulli auto-discovery was trying `http://plex.whatasave.space:443` (HTTP on HTTPS port). Root cause: plex.tv's legacy `/api/resources` XML endpoint decomposes `https://plex.whatasave.space` into `protocol=http, port=443` when no explicit port is set. Fixed by setting Plex custom access URL to `https://plex.whatasave.space:443` (explicit port), forcing the XML API to preserve the correct scheme.
+
+### NPM Certificate Audit — 14 Orphaned Certs Deleted
+
+- **Problem**: `calibre.whatasave.space` (npm-9) and `status.whatasave.space` (npm-40) failing HTTP-01 ACME renewal every hour since at least 2026-04-21. Errors: "Some challenges have failed", "No such challenge". Removed SSL from those proxy hosts.
+- **Full audit**: Queried NPM DB via Node.js (`knex`) to cross-reference all non-deleted certs against proxy host `certificate_id` assignments.
+- **Result**: 14 of 18 certs were orphaned (no proxy host assigned). Soft-deleted all 14 via `UPDATE certificate SET is_deleted=1`. 4 active certs remain: plex, jellyfin, tesla, homeassistant+ha.
+- **Lesson**: NPM renews ALL non-deleted certs on its hourly schedule regardless of proxy host assignment — orphan certs silently burn Let's Encrypt rate limit.
+- **Note**: NPM DB can be written to while running via the embedded `knex` Node.js client (`docker exec ... node -e "..."`) — no need to scale to 0.
+
+### NPM — Runtime Health Check Kill Hardened
+
+- **Finding**: `docker service ps tier1_nginx-proxy-manager` showed repeated exit 137 / "unhealthy container" failures. NPM was being killed at runtime (not just startup) when certbot renewal made the Node backend briefly unresponsive.
+- **Previous fix** (startup only): `S6_STAGE2_HOOK` + `start_period: 600s` — still in place, still correct.
+- **New fix**: Added `retries: 6` to healthcheck in `tier1.yaml` — doubles the kill threshold from 30s to 60s of consecutive failures, absorbing certbot-induced backend hiccups.
+- **Contributing factor**: 14 orphan certs deleted → certbot load drops from 16 certs to 4 per hourly cycle.
+
+### AdGuard VIP Monitors — False-DOWN Threshold Raised
+
+- **Finding**: Both AdGuard push monitors (VIP1=192.168.0.253, VIP2=192.168.0.254) showed 7 and 4 down events over 7 days respectively, but heartbeat-pusher logs showed both VIPs UP every single cycle. Down events were push delivery misses (fly.io endpoint latency), not actual VIP outages.
+- **Fix**: Updated Kuma DB — bumped `maxretries` from 1 → 3 for both AdGuard VIP monitors. Now requires 3 consecutive missed pushes (~3 min) before alerting. Restarted `dlin-uptime-kuma` to apply.
+
+### Open Items (Tabled)
+- NPM startup Kuma maintenance window — suppress HTTP monitor cascade (Plex/HA/Jellyfin "max redirects") during NPM restarts. Low priority, tabled.
+
+---
+
 ### grafana.whatasave.space Certificate Cleanup
 - Grafana is no longer proxied via NPM. Certificate (id=4) was causing hourly renewal failures.
 - **Method**: Scaled NPM to 0 (required to release SQLite write lock), then:

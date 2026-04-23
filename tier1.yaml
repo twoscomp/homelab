@@ -27,6 +27,7 @@ services:
       test: ["CMD", "/bin/check-health"]
       interval: 10s
       timeout: 3s
+      retries: 6
       start_period: 600s
     deploy:
       replicas: 1
