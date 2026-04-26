@@ -5,7 +5,25 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
 ## Follow-up Items
 
+- [ ] **Tracearr chunk bloat** (2026-04-26): tracearr-db has 9,000+ TimescaleDB hypertable chunks causing periodic disk I/O saturation. Before re-enabling tracearr, run retention/compression policies to reduce chunk count. See tracearr issue #657.
 - [ ] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Verify `security_cloudflare-bouncer` is still running (`docker service ps security_cloudflare-bouncer`), check Cloudflare Security → Events for actual blocks, and confirm the `crowdsec_block` IP list is being populated (`cscli decisions list` should show active bans). The iptables bouncer will always show zero drops — that's expected; Cloudflare Events is the ground truth.
+
+## 2026-04-26 (Incident — Tracearr I/O Saturation Cascade)
+
+### Root cause
+`tracearr-db` (TimescaleDB) accumulated 9,000+ hypertable chunks. The postgres workers flooded `dm-0` (GlusterFS backing disk) with I/O: `iowait 92.76%`, disk at 100% util, load average hit **56** on a 4-core NUC. This caused GlusterFS FUSE mount to stall, Docker daemon to time out on all Swarm operations (`DeadlineExceeded`), NPM health checks to fail, containers to get SIGKILL'd, and cloudflared/bouncer to hit `max_attempts: 5` and stop restarting.
+
+### Fix
+- Killed 36 D-state tracearr postgres workers directly by PID to break the I/O lock
+- Scaled `media_tracearr`, `media_tracearr-db`, `media_tracearr-redis` to 0 (left at 0 — chunk bloat unresolved)
+- Force-updated NPM, cloudflared, bouncer back to Running
+- Changed `cloudflared` and `cloudflare-bouncer` restart policy from `on-failure / max_attempts: 5` to `condition: any / delay: 30s` so they survive future cascades
+- Fixed bouncer `update_frequency` placement: must be under `cloudflare_config:` not at root level; also changed to `300s` to avoid CF rate-limit 10040
+
+### Lessons
+- Tracearr is fragile with large chunk counts; do not re-enable until chunk bloat is addressed
+- `max_attempts: 5` on security services is dangerous — they get permanently stuck if infra hiccups during cascade
+- `condition: any` + long delay is safer for security-critical services
 
 ## 2026-04-26 (Security — CrowdSec Cloudflare Bouncer Deployment)
 
@@ -24,7 +42,7 @@ Deployed `crowdsec-cloudflare-bouncer` (`ghcr.io/crowdsecurity/cloudflare-bounce
 ### Config notes (v0.3.0 quirks)
 - Zones must use `zone_id:` not `id:` in the zones list
 - `crowdsec_update_frequency:` controls LAPI polling (not `update_frequency:` at top level)
-- `update_frequency:` at the **top level** is required for the Cloudflare worker ticker — omitting it (zero value) panics with `NewTicker: non-positive interval`
+- `update_frequency:` must be under `cloudflare_config:` (maps to `CloudflareConfig.UpdateFrequency`), **not** at root level. Root-level placement is silently ignored. Use `300s` to avoid CF free tier rate-limiting (10040) on each sync cycle.
 - Config template: `config/crowdsec-cloudflare-bouncer.yaml`; generated at `${DATADIR}/crowdsec/config/bouncers/` via envsubst on deploy
 
 ### Cloudflare API token permissions required

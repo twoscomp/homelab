@@ -54,9 +54,8 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 5
+        condition: any
+        delay: 30s
 
   cloudflare-bouncer:
     image: ghcr.io/crowdsecurity/cloudflare-bouncer:latest
@@ -70,9 +69,8 @@ services:
         constraints:
           - node.role == manager
       restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 5
+        condition: any
+        delay: 30s
 
   crowdsec:
     image: crowdsecurity/crowdsec:latest
