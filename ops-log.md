@@ -3,6 +3,10 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## Follow-up Items
+
+- [ ] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Verify `security_cloudflare-bouncer` is still running (`docker service ps security_cloudflare-bouncer`), check Cloudflare Security → Events for actual blocks, and confirm the `crowdsec_block` IP list is being populated (`cscli decisions list` should show active bans). The iptables bouncer will always show zero drops — that's expected; Cloudflare Events is the ground truth.
+
 ## 2026-04-26 (Security — CrowdSec Cloudflare Bouncer Deployment)
 
 ### Problem
