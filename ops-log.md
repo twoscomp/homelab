@@ -3,6 +3,39 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-04-26 (Security — CrowdSec Cloudflare Bouncer Deployment)
+
+### Problem
+CrowdSec iptables bouncer reported zero traffic dropped over 7 days. Root cause: all external traffic enters via Cloudflare Tunnel — source IPs at the network layer are always Cloudflare/cloudflared container IPs, never the real attacker IP. iptables drops based on L3 source IP and never matches. Detection worked (NPM logs carry real IPs via CF-Connecting-IP), but enforcement was architecturally ineffective.
+
+### Fix
+Deployed `crowdsec-cloudflare-bouncer` (`ghcr.io/crowdsecurity/cloudflare-bouncer:latest`) as a new service in the `security` stack. On first sync it loaded **10,000 IPs** into the Cloudflare `crowdsec_block` IP list and the firewall rule `(ip.src in $crowdsec_block)` blocks them at Cloudflare's edge before they reach the tunnel.
+
+### Architecture
+- CrowdSec detects threats by parsing NPM logs (real IPs via `real_ip_header CF-Connecting-IP`)
+- Cloudflare bouncer polls LAPI every 30s and syncs decisions to Cloudflare IP Lists + Firewall Rules
+- iptables bouncer remains in place (covers any direct non-tunneled connections on nuc8-1)
+- Free tier cap: Cloudflare limits IP lists to 10,000 entries; CAPI decisions beyond that are trimmed
+
+### Config notes (v0.3.0 quirks)
+- Zones must use `zone_id:` not `id:` in the zones list
+- `crowdsec_update_frequency:` controls LAPI polling (not `update_frequency:` at top level)
+- `update_frequency:` at the **top level** is required for the Cloudflare worker ticker — omitting it (zero value) panics with `NewTicker: non-positive interval`
+- Config template: `config/crowdsec-cloudflare-bouncer.yaml`; generated at `${DATADIR}/crowdsec/config/bouncers/` via envsubst on deploy
+
+### Cloudflare API token permissions required
+- `Zone > Zone > Read`
+- `Zone > Firewall Services > Edit`
+- `Account > Account Filter Lists > Edit`
+
+### New .env vars
+- `CROWDSEC_CF_BOUNCER_KEY` — CrowdSec LAPI key for the bouncer
+- `CF_ACCOUNT_ID` — Cloudflare account ID
+- `CF_API_TOKEN` — Cloudflare API token
+- `CF_ZONE_ID` — Cloudflare zone ID for whatasave.space
+
+---
+
 ## 2026-04-26 (Incident — nuc8-2 Network Failure / Swarm Disruption)
 
 ### Incident Summary
