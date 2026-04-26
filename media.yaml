@@ -248,7 +248,9 @@ services:
   tracearr-db:
     <<: *deploy-nuc
     image: timescale/timescaledb-ha:pg18.1-ts2.25.0
-    command: -c max_locks_per_transaction=512
+    command: >-
+      -c max_locks_per_transaction=4096
+      -c timescaledb.max_tuples_decompressed_per_dml_transaction=0
     environment:
       POSTGRES_USER: tracearr
       POSTGRES_PASSWORD: ${TRACEARR_DB_PASSWORD}
