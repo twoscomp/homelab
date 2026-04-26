@@ -3,6 +3,25 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-04-26 (Incident — nuc8-2 Network Failure / Swarm Disruption)
+
+### Incident Summary
+nuc8-2 (`192.168.0.26`) went unreachable at ~05:07 UTC due to a network failure. Docker Swarm lost memberlist sync and bulk-sync with nuc8-2, triggering a cascade that force-killed dozens of containers across the cluster. nuc8-2 rejoined as `Ready` shortly after, and most services self-healed.
+
+### Services affected
+- `security_cloudflared` (0/1) — force-killed during disruption; Swarm reconciler got stuck post-recovery (known Swarm bug where service update fires but no new task is spawned). **Fixed:** `docker service update --force security_cloudflared`.
+- `media_tracearr` (0/1) — was already crash-looping pre-disruption with PostgreSQL error `53200: out of shared memory` (`max_locks_per_transaction` exhaustion). **Fixed:** added `command: -c max_locks_per_transaction=128` to `tracearr-db` in `media.yaml` and redeployed.
+
+### Root cause of tracearr DB issue
+TimescaleDB default `max_locks_per_transaction=64` is insufficient for the number of hypertable chunks tracearr maintains. Raised to 128.
+
+### Action taken
+1. Restored cloudflared via `docker service update --force security_cloudflared` — all 4 tunnel connections re-registered.
+2. Added `command: -c max_locks_per_transaction=128` to `media_tracearr-db` service in `media.yaml`.
+3. Redeployed media stack from nuc8-1; force-updated `media_tracearr-db` to apply the new postgres flag.
+
+---
+
 ## 2026-04-16 (Session — Sesame Street Hard Link Import)
 
 ### Problem
