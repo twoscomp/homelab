@@ -6,6 +6,7 @@ Full operational SOP and infrastructure context is in [`AGENTS.md`](./AGENTS.md)
 
 - **Deploy stacks** with `docker-compose -f <file>.yaml config | docker stack deploy -c - <stackname>` — docker-compose v1 only, not `docker compose` v2. Stack deploy does not read `.env` natively; docker-compose is the pre-processor.
 - **Run stack commands on nuc8-1** (`ssh nuc8-1`). nuc8-2 is a worker — stack deploys must go through the manager.
+- **Sync repo to nuc8-2** with `rsync -a --delete /home/dlin/smarthomeserver/ nuc8-2:/home/dlin/smarthomeserver/` (run from nuc8-1). nuc8-2 has no GitHub SSH key and doesn't need one — all deploys go through nuc8-1; rsync keeps nuc8-2's keepalived/system configs current. Do this after every `git push`.
 - **Never hardcode secrets** in yaml files. All credentials go in `.env` (gitignored) and are referenced as `${VAR_NAME}`.
 - **Swarm DNS inside overlay:** `<stack>_<service>` e.g. `media_sonarr`, `tier1_nginx-proxy-manager`.
 - **Use `wget` not `curl` in Alpine containers** for any URL that resolves via Swarm DNS. Alpine curl uses c-ares which cannot query Docker's embedded resolver at `127.0.0.11`. wget uses musl libc and works correctly.

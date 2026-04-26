@@ -19,6 +19,8 @@ TimescaleDB default `max_locks_per_transaction=64` is insufficient for the numbe
 1. Restored cloudflared via `docker service update --force security_cloudflared` — all 4 tunnel connections re-registered.
 2. Added `command: -c max_locks_per_transaction=128` to `media_tracearr-db` service in `media.yaml`.
 3. Redeployed media stack from nuc8-1; force-updated `media_tracearr-db` to apply the new postgres flag.
+4. Redeployed monitoring stack to apply heartbeat-pusher `$$` shell-var escaping fix (had been committed but not deployed).
+5. Established SOP: nuc8-2 repo sync via `rsync -a --delete` from nuc8-1 after each push (nuc8-2 has no GitHub SSH key; all deploys go through nuc8-1 manager). Documented in CLAUDE.md.
 
 ---
 
