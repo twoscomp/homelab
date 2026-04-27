@@ -5,8 +5,26 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
 ## Follow-up Items
 
-- [ ] **Tracearr chunk bloat** (2026-04-26): tracearr-db has 9,000+ TimescaleDB hypertable chunks causing periodic disk I/O saturation. Before re-enabling tracearr, run retention/compression policies to reduce chunk count. See tracearr issue #657.
+- [x] **Tracearr chunk bloat** (2026-04-26): resolved 2026-04-27 by wiping and restarting fresh (see incident entry).
 - [ ] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Verify `security_cloudflare-bouncer` is still running (`docker service ps security_cloudflare-bouncer`), check Cloudflare Security → Events for actual blocks, and confirm the `crowdsec_block` IP list is being populated (`cscli decisions list` should show active bans). The iptables bouncer will always show zero drops — that's expected; Cloudflare Events is the ground truth.
+
+## 2026-04-27 (Tracearr — Wipe and Fresh Start)
+
+### Problem
+After scaling tracearr back up with 729 compressed `library_snapshots` chunks, the fresh start immediately saturated dm-0 at 100% util (load avg spiked to 29). The startup queries (likely scanning all chunks and/or triggering continuous aggregate refresh) reproduced the I/O crisis even with the reduced chunk count. The `_materialized_hypertable_6` continuous aggregate held 414 chunks going back to 2014 (Tautulli historical import), which was the likely scan target.
+
+### Fix
+- Scaled all three tracearr services to 0
+- Removed `media_tracearr_timescale_data` and `media_tracearr_redis_data` volumes (wiped all historical data)
+- Restarted fresh — all three services came up cleanly with no I/O spike
+- Root cause was one-time bulk Tautulli historical import creating years of chunk history; regular use accumulates ~1 chunk/day and will not reproduce this
+
+### Policy changes applied before wipe
+- Updated `library_snapshots` retention policy (job 1001): 90 days → 730 days (2 years) to match intended retention
+- Added 2-year retention policy (job 1007) for `sessions` table (previously had no retention policy)
+- Both compression policies (jobs 1000, 1006) were already healthy
+
+---
 
 ## 2026-04-26 (Incident — Tracearr I/O Saturation Cascade)
 
