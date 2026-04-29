@@ -201,10 +201,13 @@ services:
     deploy:
       placement:
         constraints:
-          - node.hostname == nuc8-1
+          - node.hostname == nuc8-2
+      restart_policy:
+        condition: on-failure
+        delay: 30s
       resources:
         limits:
-          memory: 512m
+          memory: 2g
 
   plex-meta-manager:
     image: kometateam/kometa:nightly
