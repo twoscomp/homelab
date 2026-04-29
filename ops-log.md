@@ -8,6 +8,22 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - [x] **Tracearr chunk bloat** (2026-04-26): resolved 2026-04-27 by wiping and restarting fresh (see incident entry).
 - [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
 
+## 2026-04-29 (epic-games — OOM Kills + Overnight Swarm Flap)
+
+### Problem
+epic-games container (charlocharlie/epicgames-freegames) was getting OOM killed at every midnight cron run. Chromium (used to claim free games via Puppeteer) exceeded the 512MB memory limit. The midnight 00:08 OOM kill on 2026-04-28 contributed to a cascade: nuc8-1 was already memory-pressured (1.1GB available, 1.5GB swap in use), and the kill coincided with a router/gateway (192.168.0.1) reboot at 00:14-00:15 that dropped nuc8-2 from the Swarm gossip cluster. All services on nuc8-2 were evicted and rescheduled; Swarm recovered on its own within ~5 minutes.
+
+### Fix
+- Moved epic-games from nuc8-1 → nuc8-2 (1.9GB available, 197MB swap — healthy headroom)
+- Raised memory limit from 512MB → 2GB (upstream-recommended minimum)
+- Added `on-failure` restart policy with 30s delay
+- Reduced cron from 4×/day to 2×/day (midnight + noon) in `config.json5`
+
+### Root cause of Swarm flap
+Router at 192.168.0.1 rebooted at ~00:14 — DNS queries to gateway timed out simultaneously with nuc8-2 dropping from gossip. "TCP works but UDP fails" fingerprint confirms gateway was mid-boot. Not related to CrowdSec or any Docker config. No action needed beyond epic-games fix.
+
+---
+
 ## 2026-04-29 (CrowdSec — False Positive + Remove Cloudflare Bouncer)
 
 ### Problem
