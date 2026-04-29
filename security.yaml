@@ -5,6 +5,9 @@ version: "3.9"
 #   any open WAN ports. All external hostnames point to tier1_nginx-proxy-manager:80.
 # - crowdsec: Lightweight collaborative IPS — parses NPM logs and shares threat intel
 #   with the CrowdSec community. Pairs with the iptables bouncer installed on each host.
+#   Note: cloudflare-bouncer was removed — CF free/pro/biz plans cap custom IP lists at
+#   10k items while the CrowdSec community blocklist exceeds 20k, causing constant rate
+#   limiting (10040) and silent truncation. iptables bouncer provides equivalent coverage.
 #
 # Prerequisites:
 #   docker secret create cloudflare_tunnel_token -   (paste tunnel token from stdin)
@@ -48,21 +51,6 @@ services:
       - TZ=${TZ}
     secrets:
       - cloudflare_tunnel_token
-    deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      restart_policy:
-        condition: any
-        delay: 30s
-
-  cloudflare-bouncer:
-    image: ghcr.io/crowdsecurity/cloudflare-bouncer:latest
-    environment:
-      - TZ=${TZ}
-    volumes:
-      - ${DATADIR}/crowdsec/config/bouncers/crowdsec-cloudflare-bouncer.yaml:/etc/crowdsec/bouncers/crowdsec-cloudflare-bouncer.yaml:ro
     deploy:
       replicas: 1
       placement:
