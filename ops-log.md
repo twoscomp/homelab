@@ -6,7 +6,20 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 ## Follow-up Items
 
 - [x] **Tracearr chunk bloat** (2026-04-26): resolved 2026-04-27 by wiping and restarting fresh (see incident entry).
-- [ ] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Verify `security_cloudflare-bouncer` is still running (`docker service ps security_cloudflare-bouncer`), check Cloudflare Security → Events for actual blocks, and confirm the `crowdsec_block` IP list is being populated (`cscli decisions list` should show active bans). The iptables bouncer will always show zero drops — that's expected; Cloudflare Events is the ground truth.
+- [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
+
+## 2026-04-29 (CrowdSec — False Positive + Remove Cloudflare Bouncer)
+
+### Problem
+Home IP (23.123.225.12, AT&T) was banned on 2026-04-27 by `crowdsecurity/http-crawl-non_statics` and pushed to Cloudflare via the cloudflare-bouncer. Investigation revealed the bouncer had been silently broken since deployment: CF free/pro/biz plans cap custom IP lists at 10,000 items, but the CrowdSec community blocklist exceeds 20,000 IPs. The bouncer was getting rate-limited (error 10040) on every 5-minute sync and silently dropping ~19,838 IPs per cycle.
+
+### Fix
+- Added home IP to CrowdSec `home` allowlist (permanent, no expiration)
+- Removed WAF rule `a0514faf6c45439ea9a63b1196fa0de7` and deleted `crowdsec_block` IP list from Cloudflare
+- Removed `security_cloudflare-bouncer` service from the security stack
+- iptables bouncer on nuc8-1 provides equivalent enforcement for all CrowdSec decisions
+
+---
 
 ## 2026-04-27 (Tracearr — Wipe and Fresh Start)
 
