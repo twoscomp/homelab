@@ -5,8 +5,29 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
 ## Follow-up Items
 
-- [x] **Tracearr chunk bloat** (2026-04-26): resolved 2026-04-27 by wiping and restarting fresh (see incident entry).
+- [x] **Tracearr chunk bloat** (2026-04-26): moot — tracearr removed 2026-05-05 (see entry below).
 - [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
+- [ ] **fsck on nuc8-1 root LVM (dm-0)**: `tune2fs -C 1` set to force fsck at next reboot. Schedule a maintenance reboot to repair inode #4327725 (`/var/lib/docker/volumes/media_tracearr_timescale_data/_data/base/16384/372780`). Not urgent — tracearr removed, error no longer triggering.
+
+## 2026-05-05 (Ops Review — Infrastructure Flapping + Tracearr Removal)
+
+### Root cause of infrastructure yellow flapping
+EXT4 filesystem corruption on **dm-0** (root LVM `/dev/mapper/ubuntu--vg-ubuntu--lv`, where Docker named volumes live). Inode #4327725 had an invalid checksum, triggering `EXT4-fs error: ext4_lookup: iget: checksum invalid` every ~1h from 12:13 UTC onward. The source was `comm postgres` (tracearr-db) repeatedly accessing a corrupt file in `media_tracearr_timescale_data`. This caused brief I/O stalls on the root LVM that delayed the heartbeat-pusher loop, producing the "flapping yellow" behavior in infrastructure monitors. SMART shows no physical disk errors — this is filesystem-level corruption from previous unclean postgres shutdowns.
+
+A coincident 20-minute Plex/HA HTTP timeout (18:06–18:25 UTC) correlated with the 18:03 EXT4 error and likely NFS/NPM downstream pressure.
+
+### Other findings
+- **plex-meta-manager**: 94% of 512MB memory limit (482MB used) — near-OOM, contributing to nuc8-1 memory pressure (swap at 2.5GB, up from 1.5GB 6 days ago).
+- **nuc8-1 memory**: 2.9GB used / 3.8GB total, 2.5GB swap — approaching saturation.
+- **bazarr**: 103% CPU at time of review — background scan, resolved on its own.
+
+### Actions taken
+- **Tracearr removed entirely** (app + timescaledb-ha + redis): services scaled to 0, named volumes deleted (`tracearr_redis_data` removed cleanly; `tracearr_timescale_data` partially removed — single corrupt file `base/16384/372780` blocked by EBADMSG). NPM proxy hosts 64/65/66 soft-deleted. Kuma monitor 29 deleted.
+- **fsck scheduled**: `tune2fs -C 1 /dev/mapper/ubuntu--vg-ubuntu--lv` — will auto-fsck at next reboot to repair remaining corrupt inode.
+- **plex-meta-manager memory** raised 512MB → 1GB to prevent OOM kill.
+- EXT4 errors stopped immediately after tracearr-db was scaled to 0.
+
+---
 
 ## 2026-04-29 (epic-games — OOM Kills + Overnight Swarm Flap)
 
