@@ -9,6 +9,17 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
 - [ ] **fsck on nuc8-1 root LVM (dm-0)**: `tune2fs -C 1` set to force fsck at next reboot. Schedule a maintenance reboot to repair inode #4327725 (`/var/lib/docker/volumes/media_tracearr_timescale_data/_data/base/16384/372780`). Not urgent — tracearr removed, error no longer triggering.
 
+## 2026-05-23 — Calibre library aggressive trim
+
+- **Dedup**: removed 9 duplicate books across 8 groups; 2 manual format-merges pending in CWA UI (Queen of Air and Darkness ids 1985+187; The Starless Sea ids 2084+284).
+- **Language cleanup**: deleted 24 genuine foreign-language editions (German, French, Dutch, Portuguese, Spanish, Swedish); fixed 132 English books with invalid `eee` lang code + 5 mistagged books to `eng`.
+- **Aggressive trim**: removed 845 books from analyzed authors (kept only popular/canonical works). Library: 1916 → 1038 books.
+  - Removed entirely: Tom Clancy, Tijan, E.E. "Doc" Smith, Lucy Score, Lauren Asher, Jessa Hastings, Katherine Center, Lynn Painter, Mhairi McFarlane, Beth O'Leary, Abby Jimenez, Paul David Tripp, Ali Hazelwood, Emily Henry, Alice Oseman, Jenny Han.
+  - Major authors trimmed to canonical works: Asimov, Sanderson, Tchaikovsky, Gaiman, GRRM, Scalzi, Tolkien, Hemingway, Didion, Holly Black, Stephenson, Howey, Bardugo, Jemisin, Woolf, Plath, Everett, Sapkowski, Adams, GGK, Lewis, DFW, Klune, Mafi, Yarros, Stiefvater, Kuang, Lee, Doerr, Weir, Isaacson, Newport, bell hooks, Whitehead, Towles, Blake, Schwab, Ross, Fawcett, Garber, TJR, Rooney.
+  - Backups at `/mnt/newton/appdata/calibre-web-automated/{dedup,lang_cleanup,trim}_backup`.
+
+---
+
 ## 2026-05-23 — Shelfmark added; Readarr retired
 
 - **Shelfmark** deployed as TrueNAS app, externally accessible at https://books.whatasave.space. Auth via Calibre-Web-Automated DB. Added as HTTP monitor in Kuma (monitor 31), placed in Libraries group on twosclub status page.
