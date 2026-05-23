@@ -9,6 +9,17 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
 - [ ] **fsck on nuc8-1 root LVM (dm-0)**: `tune2fs -C 1` set to force fsck at next reboot. Schedule a maintenance reboot to repair inode #4327725 (`/var/lib/docker/volumes/media_tracearr_timescale_data/_data/base/16384/372780`). Not urgent — tracearr removed, error no longer triggering.
 
+## 2026-05-23 — Calibre library 3rd/4th-pass trim + format merges
+
+- **Format merges**: merged AZW3 into EPUB entry for Queen of Air and Darkness (1985) and The Starless Sea (2084). Both now have both formats.
+- **YA/romance cleanup (trim3)**: removed 53 books — pure romance genre, YA, Shadowhunter tie-ins, Brandon Turner real estate noise, Lauretta Hignett urban fantasy. Library: 986 → 931.
+- **Well-known/award-winning-only trim (trim4)**: removed 119 books — genre thrillers/mysteries, popular-but-not-acclaimed fiction, self-help/parenting noise, minor literary works, shorts by analyzed authors outside keep list. Library: 931 → 812.
+  - Kept: Pulitzer/Booker/Nobel/Hugo/National Book Award winners and finalists; major cultural bestsellers; acclaimed genre fiction.
+  - Removed: genre mystery series (Grisham, Slaughter, Penny, Reichs), genre thriller (Baldacci, Preston, Koontz, Cronin, le Carré posthumous), self-help (Colvin, Leonard, Chip Heath, Millman, Goggins), parenting books, minor anthologies, obscure literary novellas.
+- Backups at `/mnt/newton/appdata/calibre-web-automated/trim{3,4}_backup` and `format_merge_backup`.
+
+---
+
 ## 2026-05-23 — Calibre library second-pass trim
 
 - **Removed 52 books** from authors not covered in first pass. Library: 1038 → 986 books.
