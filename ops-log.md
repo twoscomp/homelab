@@ -9,6 +9,13 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
 - [ ] **fsck on nuc8-1 root LVM (dm-0)**: `tune2fs -C 1` set to force fsck at next reboot. Schedule a maintenance reboot to repair inode #4327725 (`/var/lib/docker/volumes/media_tracearr_timescale_data/_data/base/16384/372780`). Not urgent — tracearr removed, error no longer triggering.
 
+## 2026-05-23 — Shelfmark added; Readarr retired
+
+- **Shelfmark** deployed as TrueNAS app, externally accessible at https://books.whatasave.space. Auth via Calibre-Web-Automated DB. Added as HTTP monitor in Kuma (monitor 31), placed in Libraries group on twosclub status page.
+- **Readarr** scaled to 0 (media_readarr 0/0 replicas). Monitor deactivated in Kuma and removed from twosclub status page. Push pair removed from KUMA_MONITORS.
+
+---
+
 ## 2026-05-05 (Ops Review — Infrastructure Flapping + Tracearr Removal)
 
 ### Root cause of infrastructure yellow flapping

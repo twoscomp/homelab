@@ -7,8 +7,8 @@ Docker Swarm stacks for homelab services running on Intel NUCs, integrated with 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      TrueNAS Server                         │
-│  Plex, Download clients, Home Assistant, TrueNAS Apps       │
-│  NFS: /mnt/newton/media (192.168.0.196)                     │
+│  Plex, Shelfmark, Download clients, Home Assistant,         │
+│  TrueNAS Apps; NFS: /mnt/newton/media (192.168.0.196)       │
 └──────────────────────────┬──────────────────────────────────┘
                            │ NFS
 ┌──────────────────────────┴──────────────────────────────────┐
@@ -60,6 +60,12 @@ Docker Swarm stacks for homelab services running on Intel NUCs, integrated with 
 | Maintainerr | Plex library maintenance |
 | Epic Games | Free games claimer |
 
+### TrueNAS Apps (native TrueNAS app installs, not Swarm)
+| App | Description | URL |
+|-----|-------------|-----|
+| Shelfmark | Book search & request tool; auth via Calibre-Web-Automated DB | https://books.whatasave.space |
+| Calibre-Web-Automated | Calibre-Web fork with automatic book imports | https://calibre.whatasave.space |
+
 ### teslamate.yaml - Tesla Vehicle Tracking
 | Service | Description |
 |---------|-------------|
@@ -84,8 +90,8 @@ Docker Swarm stacks for homelab services running on Intel NUCs, integrated with 
 
 Uptime Kuma hosted on [fly.io](https://fly.io) at `https://dlin-uptime-kuma.fly.dev`, providing a public status page without requiring VPN or LAN access.
 
-- **Direct HTTP monitors**: Overseerr, Calibre, Komga, Plex (public `whatasave.space` URLs)
-- **Push monitors**: Sonarr, Radarr, Readarr, Bazarr, Prowlarr, QBT, NZBGet, Mylar, Teslamate, Maintainerr — heartbeats sent by `heartbeat-pusher` in `monitoring.yaml`
+- **Direct HTTP monitors**: Overseerr, Calibre, Komga, Plex, Shelfmark (public `whatasave.space` URLs)
+- **Push monitors**: Sonarr, Radarr, Bazarr, Prowlarr, QBT, NZBGet, Mylar, Teslamate, Maintainerr — heartbeats sent by `heartbeat-pusher` in `monitoring.yaml`
 - **Notifications**: Discord (`twosclub` and `twosclub Admins` webhooks), Email
 
 Initial deploy (one-time):
