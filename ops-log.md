@@ -9,6 +9,23 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
 - [ ] **fsck on nuc8-1 root LVM (dm-0)**: `tune2fs -C 1` set to force fsck at next reboot. Schedule a maintenance reboot to repair inode #4327725 (`/var/lib/docker/volumes/media_tracearr_timescale_data/_data/base/16384/372780`). Not urgent — tracearr removed, error no longer triggering.
 
+## 2026-05-23 — Calibre library second-pass trim
+
+- **Removed 52 books** from authors not covered in first pass. Library: 1038 → 986 books.
+  - Tom Clancy 6 stragglers (slipped through first pass under exact-name entry)
+  - Ted Chiang trimmed to 2 canonical collections (removed 8 individual shorts)
+  - Ken Liu trimmed to Dandelion Dynasty x4 + 4 collections (removed 8 minor works/shorts)
+  - Marie Lu: kept Legend trilogy, removed 12 (all other series are YA)
+  - Cixin Liu: kept Three-Body trilogy + Ball Lightning + Wandering Earth, removed 4 minor/dupe
+  - Susanna Calkins removed entirely (niche historical mystery, Readarr noise)
+  - Brian Herbert/KJA Prelude to Dune trilogy removed (not Frank Herbert's original canon)
+  - Pierce Brown: removed Sons of Ares graphic novel tie-in (kept 6 Red Rising novels)
+  - Michael Pollan + Daniel H. Pink: removed 2 minor works each
+- **Fixed 15 books** with missing language metadata → `eng`.
+- Backups at `/mnt/newton/appdata/calibre-web-automated/trim2_backup`.
+
+---
+
 ## 2026-05-23 — Calibre library aggressive trim
 
 - **Dedup**: removed 9 duplicate books across 8 groups; 2 manual format-merges pending in CWA UI (Queen of Air and Darkness ids 1985+187; The Starless Sea ids 2084+284).
