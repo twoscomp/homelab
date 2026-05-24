@@ -24,7 +24,7 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
   - R.F. Kuang "Making Space" (not in her bibliography — likely misattributed)
   - Fonda Lee "CROSS FIRE" (minor side novella in Green Bone Saga)
 - Open items: metadata fix needed for id=2079 (Percival Everett *Watershed*, swapped title/author) and id=1021 (Cal Newport, likely *Deep Work* with corrupted title).
-- 3 GRRM companion books remain (Rise of the Dragon, World of Ice & Fire, Lands of Ice & Fire) — pending decision to keep or remove.
+- Removed 3 GRRM companion books (Rise of the Dragon, World of Ice & Fire, Lands of Ice & Fire). Library: 644 → 641.
 
 ---
 
