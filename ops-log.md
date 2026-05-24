@@ -9,6 +9,28 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
 - [ ] **fsck on nuc8-1 root LVM (dm-0)**: `tune2fs -C 1` set to force fsck at next reboot. Schedule a maintenance reboot to repair inode #4327725 (`/var/lib/docker/volumes/media_tracearr_timescale_data/_data/base/16384/372780`). Not urgent — tracearr removed, error no longer triggering.
 
+## 2026-05-23 — Calibre library 5th-pass trim
+
+- **Removed 149 books** — final quality pass, library: 812 → 663 books.
+  - Sarah J. Maas all 18 (ACOTAR, Throne of Glass, Crescent City, Catwoman — fantasy romance, no literary awards)
+  - Maggie Stiefvater all 12 (Shiver/Wolves, Raven Cycle, Dreamer Trilogy, Scorpio Races — YA)
+  - Tahereh Mafi all 16 (Shatter Me + This Woven Kingdom + standalones — YA romance)
+  - Stephanie Garber all 5 (Caraval + Once Upon a Broken Heart — YA fantasy romance)
+  - Rebecca Ross all 4 (Divine Rivals + Elements of Cadence — YA fantasy romance)
+  - Olivie Blake all 4 (Atlas Six series — BookTok fantasy, no literary awards)
+  - Rebecca Yarros 2 contemporary romances (keeping Empyrean — Fourth Wing/Iron Flame)
+  - 4 duplicates (different author-name spellings)
+  - 4 parenting books that survived earlier passes
+  - 5 tech/hobby niche books (Programming Phoenix, Functional Programming in Scala, etc.)
+  - 7 self-help non-canonical (4 Mel Robbins, Galloway, Murphy, Forte PARA Method)
+  - ~50 genre thriller/romance/historical fiction not meeting award/acclaim bar
+  - Asimov non-canonical: 8 edited anthologies + tie-in by others
+  - GRRM Wild Cards tie-ins: 4 anthology/franchise books
+  - ~25 misc niche/obscure/metadata-corrupted entries
+- Backups at `/mnt/newton/appdata/calibre-web-automated/trim5_backup`.
+
+---
+
 ## 2026-05-23 — Calibre library 3rd/4th-pass trim + format merges
 
 - **Format merges**: merged AZW3 into EPUB entry for Queen of Air and Darkness (1985) and The Starless Sea (2084). Both now have both formats.
