@@ -9,6 +9,25 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - [x] **CrowdSec Cloudflare bouncer health check** (added 2026-04-26): Resolved 2026-04-29 — cloudflare-bouncer removed (see entry below).
 - [ ] **fsck on nuc8-1 root LVM (dm-0)**: `tune2fs -C 1` set to force fsck at next reboot. Schedule a maintenance reboot to repair inode #4327725 (`/var/lib/docker/volumes/media_tracearr_timescale_data/_data/base/16384/372780`). Not urgent — tracearr removed, error no longer triggering.
 
+## 2026-05-23 — Calibre library 6th-pass trim (stragglers)
+
+- **Removed 19 books** — stragglers/cleanup, library: 663 → 644 books.
+  - 4 Noelle W. Ihli indie thrillers (missed in all prior passes)
+  - Stephanie Garber "A Curse for True Love" (survived trim5 due to wrong ID)
+  - James S.A. Corey "Honor Among Thieves" (Star Wars tie-in by Expanse authors)
+  - Options Playbook (Brian Overby — finance), Weald Fae 03 (self-published, orphaned)
+  - Edited anthologies not author's own work: Modern American Memoirs (Dillard), Best American SF&F 2018 (Adams), Ghastly Beyond Belief (Gaiman/Newman)
+  - Jake Tapper "The Devil May Dance" (missed alongside other Tapper thrillers)
+  - Genre thriller/romance: Mary Kubica, Rachel Hawkins, Mikki Brammer
+  - Soman Chainani "Beasts and Beauty" (YA-adjacent)
+  - Corrupted entry: "Octavia E. Butler" title = author (metadata error)
+  - R.F. Kuang "Making Space" (not in her bibliography — likely misattributed)
+  - Fonda Lee "CROSS FIRE" (minor side novella in Green Bone Saga)
+- Open items: metadata fix needed for id=2079 (Percival Everett *Watershed*, swapped title/author) and id=1021 (Cal Newport, likely *Deep Work* with corrupted title).
+- 3 GRRM companion books remain (Rise of the Dragon, World of Ice & Fire, Lands of Ice & Fire) — pending decision to keep or remove.
+
+---
+
 ## 2026-05-23 — Calibre library 5th-pass trim
 
 - **Removed 149 books** — final quality pass, library: 812 → 663 books.
