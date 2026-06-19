@@ -3,6 +3,25 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-06-19 (Docker not enabled on nuc8-2 — post-power-blip fix)
+
+### Problem
+After a short power blip today, nuc8-2 rebooted but Docker never started. AdGuard on nuc8-2 stayed down; VIP2 (192.168.0.254) failed over to nuc8-1 via keepalived. Manual `systemctl restart docker` on nuc8-2 immediately brought everything back.
+
+### Root cause
+`docker.service` was `UnitFileState=disabled` on nuc8-2 — it was never configured to start on boot. `containerd` was enabled; Docker was not. No stale PID files or other damage — Docker is healthy, just not enabled.
+
+### Fix
+```
+sudo systemctl enable docker   # on nuc8-2
+```
+Created symlink `/etc/systemd/system/multi-user.target.wants/docker.service`. Verified `systemctl is-enabled docker → enabled`. nuc8-1 was already enabled.
+
+### Note
+`Restart=always` is already set in the Docker unit, so runtime crashes self-recover. Boot enablement was the only missing piece.
+
+---
+
 ## Follow-up Items
 
 - [x] **Tracearr chunk bloat** (2026-04-26): moot — tracearr removed 2026-05-05 (see entry below).
