@@ -48,7 +48,6 @@ Docker Swarm stacks for homelab services running on Intel NUCs, integrated with 
 | Radarr | Movie management |
 | Sonarr | TV show management |
 | Lidarr | Music management |
-| Readarr | Book management |
 | Mylar3 | Comic management |
 | Prowlarr | Indexer management |
 | Bazarr | Subtitle management |

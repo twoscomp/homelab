@@ -3,6 +3,17 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-06-24 (Readarr removed — service no longer wanted)
+
+### Change
+Removed `readarr` from `media.yaml` and README's service table at user request (no longer needed/wanted). Note: this had previously been logged as "retired" on 2026-05-23 but the service definition and running container were never actually removed.
+
+### Process note
+`docker stack deploy` does not prune services removed from the compose file — after redeploying, `media_readarr` was still running (`docker service ls` showed it untouched). Required an explicit `docker service rm media_readarr`. Anyone removing a service from a stack file needs this extra step.
+
+### Open item
+Readarr's config volume (`${SERVARRDIR}/readarr/config`) was left in place — not deleted, since that's irreversible and wasn't asked for. Clean up manually if disk space matters.
+
 ## 2026-06-24 (Maintainerr crash-looping after media stack redeploy — healthcheck start_period too short)
 
 ### Problem
