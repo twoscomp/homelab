@@ -11,8 +11,8 @@ Removed `readarr` from `media.yaml` and README's service table at user request (
 ### Process note
 `docker stack deploy` does not prune services removed from the compose file — after redeploying, `media_readarr` was still running (`docker service ls` showed it untouched). Required an explicit `docker service rm media_readarr`. Anyone removing a service from a stack file needs this extra step.
 
-### Open item
-Readarr's config volume (`${SERVARRDIR}/readarr/config`) was left in place — not deleted, since that's irreversible and wasn't asked for. Clean up manually if disk space matters.
+### Cleanup
+Config volume deleted at user's request: `sudo rm -rf /servarrData/readarr` on nuc8-1 (7.2GB reclaimed). Most files were owned by `apps` (uid 568) and needed `sudo` — plain `rm -rf` over SSH hit `Permission denied` on the MediaCover poster files. Confirmed not present on nuc8-2 (Readarr was pinned to nuc8-1 only, local non-shared storage).
 
 ## 2026-06-24 (Maintainerr crash-looping after media stack redeploy — healthcheck start_period too short)
 
