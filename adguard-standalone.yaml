@@ -11,7 +11,7 @@ services:
   adguard:
     image: adguard/adguardhome:latest
     container_name: adguard
-    restart: unless-stopped
+    restart: always
     network_mode: host
     environment:
       - PUID=${PUID:-1000}

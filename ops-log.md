@@ -3,6 +3,72 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-06-24 (Maintainerr crash-looping after media stack redeploy — healthcheck start_period too short)
+
+### Problem
+After redeploying the `media` stack, `media_maintainerr` came up `0/1` and wasn't reachable.
+
+### Diagnosis
+- `docker service ps media_maintainerr --no-trunc` showed a `Shutdown`/`Failed` task: `task: non-zero exit (1): dockerexec: unhealthy container`.
+- `docker inspect <container> --format '{{json .State.Health}}'` showed repeated `curl: (7) Failed to connect to 127.0.0.1 port 6246` — the app's own healthcheck script (`/opt/app/healthcheck.sh`) failing.
+- Full container logs showed `maintainerr:3.15.3` actually boots successfully (`Nest application successfully started`), but NestJS route registration takes ~60-90s on this version — longer than the image's baked-in healthcheck `start_period: 40s` (3 retries × 30s interval). Docker killed two consecutive boot attempts as "unhealthy" before a third attempt won the race and came up healthy. The `npm error ... signal SIGTERM` visible in the killed attempts' logs was npm reporting the kill, not an app crash.
+- Confirmed the data volume (`${DATADIR}/maintainerr`, uid 568:1001) had correct ownership/permissions — not a contributing factor.
+
+### Fix
+Added an explicit `healthcheck:` override to the `maintainerr` service in `media.yaml`, keeping the image's own probe script but extending the grace period:
+```yaml
+healthcheck:
+  test: ["CMD", "/opt/app/healthcheck.sh"]
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 150s
+```
+Redeployed via `docker-compose -f media.yaml config | docker stack deploy -c - media` on nuc8-1. Confirmed clean single-attempt startup (`healthy` after ~60s, no kill/restart cycling).
+
+### Process note
+`docker stack deploy` re-resolves and redeploys every service in the file (not just the one changed) — expected/correct behavior for keeping floating `:latest` tags current (see image-update discussion), but means a one-line config tweak triggers a rolling restart of the whole stack.
+
+## 2026-06-23 (AdGuard VIP2 flap during UPS install — restart policy hardened)
+
+### Problem
+User installed a new UPS today. AdGuard on nuc8-2 (VIP2, 192.168.0.254) went down around 17:45 Central (22:45 UTC); user fixed it manually with `docker compose -f adguard-standalone.yaml up -d` on nuc8-2.
+
+### Diagnosis
+- nuc8-2 never rebooted (continuously up since Jun 5) — ruled out a power-loss reboot of the compute node itself.
+- `keepalived`'s `check_adguard` script (`dig @127.0.0.1 +time=2 +tries=1 google.com`) failed with exit 9 (no reply/timeout) **identically on both nuc8-1 and nuc8-2** at 22:10–22:14 and 22:44–22:57 UTC — a shared upstream/network blip (consistent with cabling/power work during the UPS install), not independent container crashes. Both self-healed each time; this caused brief, harmless VRRP master flapping on `VI_ADGUARD2` since neither side was reliably healthy during those windows.
+- Divergence: starting ~22:57 nuc8-1 recovered but nuc8-2 did not — its AdGuard container was found completely absent (not even `Exited`), meaning it had been stopped rather than crash-looping. `restart: unless-stopped` does not re-create or restart an explicitly-stopped container, so it sat down until the manual fix at 23:01, at which point VIP2 correctly returned to nuc8-2 (priority 100).
+- Root cause of the nuc8-2-specific stop is not fully confirmed from logs (no OOM/kill/dockerd error recorded) — most consistent with the container being stopped incidentally during the physical UPS/network work.
+
+### Fix
+Changed `restart: unless-stopped` → `restart: always` in `adguard-standalone.yaml` on both nodes (`docker compose -f adguard-standalone.yaml up -d` to apply — restart-policy changes require container recreation). Confirmed `RestartPolicy=always` on both nuc8-1 and nuc8-2; both containers healthy after recreate.
+
+### Open Items
+- Could not verify whether Uptime Kuma paged on this ~50-minute VIP2 degradation — `flyctl` wasn't authenticated in-session. Worth a manual check next review.
+
+---
+
+## 2026-06-20 (ZFS permanent error on newton/media — leaked corrupted dnode, accepted as benign)
+
+### Problem
+`zpool status -v newton` reported a permanent error on `newton/media:<0x252>` with no resolvable path. Pool otherwise `ONLINE`, all 5 raidz1-0 devices at 0/0/0 errors. A prior scrub (Jun 10) had already found the error and repaired 0B. Survived a full system reboot and multiple subsequent full scrubs.
+
+### Diagnosis
+- `zdb -dddddd newton/media 594` (0x252 = 594 decimal) showed a 4.22GB file, `links 1`, **`path not found, possibly leaked`** — an orphaned dnode with no live directory entry. uid 568 (apps), mtime Apr 17, ctime Jun 6.
+- Confirmed no snapshots exist on `newton/media`, ruling out a snapshot pinning the block.
+- Ran a fast targeted **error scrub** (`zpool scrub -e newton`, requires `head_errlog` feature) instead of a full 2-day scrub — completed instantly, `scrubbed 1 error blocks`, `0B repaired`, and bumped `CKSUM` to 2 on **all 5 disks equally**. Equal symmetric CKSUM bump across every disk is the signature of raidz1 combinatorial reconstruction trying each disk as the "bad" one and failing on every combination — confirms genuinely unrecoverable corruption (not a failing drive, not an accounting leak).
+
+### Root cause
+User deleted a corrupted media file (correct response per ZFS's own guidance: "Restore the file in question if possible. Otherwise restore the entire pool from backup"). Normally `rm` completes cleanly because freeing a file only requires reading its indirect block-pointer tree (the data blocks being freed don't need to be read). Here, the corruption extended into the metadata/indirect-block structure needed to complete the free walk, so the unlink left an orphaned dnode that no scrub or reboot could drain. Likely cause of the original corruption: a torn/interrupted write to that file (no SMART or per-disk anomalies found).
+
+### Resolution
+Accepted as benign — no live data at risk, ~4.2GB of permanently dead-but-allocated space out of 32.2T. True removal would require rebuilding the dataset (copy live/reachable data to a fresh dataset via `zfs send`/`rsync`, destroy the old one) — disproportionate for one file. Ran `zpool clear newton` to reset cosmetic error/CKSUM counters.
+
+### Process note
+`zpool scrub -e <pool>` (error scrub, needs `feature@head_errlog`) re-verifies only the known-bad blocks instead of the whole pool — use this instead of a full scrub when just confirming whether a known permanent error has cleared.
+
+---
+
 ## 2026-06-19 (Docker not enabled on nuc8-2 — post-power-blip fix)
 
 ### Problem

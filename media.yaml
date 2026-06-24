@@ -243,5 +243,11 @@ services:
           memory: 512m
     # ports:
     #   - 6246:6246
+    healthcheck:
+      test: ["CMD", "/opt/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 150s
     restart: unless-stopped
 
