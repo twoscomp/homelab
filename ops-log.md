@@ -31,8 +31,13 @@ When recreating identical standalone containers across multiple nodes via floati
 - **Clean:** No other containers on either node showed nonzero restart counts. Disk usage nuc8-1 37% (`/`), 7% (`/mnt/dockerData`); nuc8-2 56% (`/`). Load average low on both (<0.7). Both nodes up 3d21h (since the 2026-06-21 ~02:38 reboot visible in keepalived's init log).
 - **Already handled this session, not re-flagged:** Maintainerr healthcheck timing (fixed), Readarr removed.
 
+### Kuma Follow-up (flyctl authenticated later same day)
+- **AdGuard (VIP1) monitor: 100% uptime, 0 down events over 24h** — confirms the nuc8-1 crash loop above was genuinely invisible to clients; the monitor checks the VIP IP, and nuc8-2 served it correctly the whole time.
+- `Sonarr`/`Prowlarr` each logged one "no heartbeat in time window" at 19:18 — matches the timing of the two `media.yaml` stack redeploys done earlier (Maintainerr healthcheck fix, Readarr removal). Expected rolling-restart noise, not a real outage.
+- `Overseerr` (500 at 22:18) and `Tautulli` (500 at 17:13) each had one isolated app-level error, unrelated to any change made today. Not investigated further — single occurrences, not a pattern.
+- All other monitors 98.6–100% over 24h, consistent with normal noise (see Known False Positives in the review format doc).
+
 ### Open Items
-- `flyctl auth login` still needed to pull Uptime Kuma 24h uptime/downtime stats — last attempted during the 2026-06-23 AdGuard incident, still not done.
 - Consider raising `media_bazarr`'s memory limit from 512m before it OOMs.
 
 ## 2026-06-24 (Readarr removed — service no longer wanted)
