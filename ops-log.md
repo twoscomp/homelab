@@ -3,6 +3,38 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-06-24 (AdGuard nuc8-1 crash loop — stale image digest, schema version mismatch, ~24h silent VIP1 failover)
+
+### Problem
+Found during ops review: `docker inspect adguard` on nuc8-1 showed `Status=restarting Health=unhealthy Restarts=1481`. No user-visible outage — DNS kept working throughout because keepalived had already failed both VIPs over to nuc8-2.
+
+### Diagnosis
+- Logs: `failed to parse configuration file err="unknown current schema version 34"` on every boot attempt, looping every ~60s since container creation.
+- Container `Created=2026-06-23T23:16:43Z` — this is the exact moment `adguard-standalone.yaml` was redeployed earlier in the day to apply `restart: always`. `docker compose up -d` pulled whatever `adguard/adguardhome:latest` resolved to on nuc8-1 at that instant; nuc8-2's pull (run moments later/earlier) resolved to a different, newer digest. `docker image inspect` confirmed the two nodes had genuinely different digests for the same `:latest` tag (v0.107.71 on nuc8-1 vs v0.107.77 on nuc8-2) — a Docker Hub manifest-propagation race between the two pulls, not anything stack/config related. The older v0.107.71 binary doesn't recognize `schema_version: 34`, which had been written to the config by a previously-running newer version (AdGuard's own auto-update or a prior pull) before the unlucky recreate.
+- `journalctl -u keepalived` on both nodes confirmed: `check_adguard` started failing at 23:16:49, VI_ADGUARD1 dropped from priority 100→80 within 10s, nuc8-2 took MASTER for VI_ADGUARD1 at 23:17:02, and **no further state changes logged since** — confirms both VIPs sat converged on nuc8-2 continuously for ~24h with no flapping. This is the HA design working exactly as intended for a genuine sustained failure (contrast with the transient-blip flapping seen during the 2026-06-23 UPS incident).
+
+### Fix
+- Backed up `AdGuardHome.yaml` on nuc8-1 (`AdGuardHome.yaml.bak-pre-fix`) before touching anything.
+- `docker pull adguard/adguardhome:latest` on nuc8-1 — resolved to the same digest nuc8-2 already had (`sha256:e6f2b8bc...`).
+- `docker compose -f adguard-standalone.yaml up -d` to recreate. Came up `healthy`, restart count reset to 0, filter lists loaded correctly (config/settings intact — no data loss). VIP1 confirmed back on nuc8-1, VIP2 on nuc8-2 (normal split restored).
+
+### Lesson learned
+When recreating identical standalone containers across multiple nodes via floating `:latest` tags, don't assume both nodes resolve to the same image — pull and compare digests, or pull on all nodes first before recreating any of them, especially right after a registry push window.
+
+## 2026-06-24 Ops Review
+
+**Method:** restart-count audit across all containers on nuc8-1/nuc8-2 (`docker inspect --format RestartCount`), `docker stats` snapshot, ZFS pool status, disk/load check on both NUCs. Uptime Kuma DB unreachable — `flyctl` not authenticated in-session.
+
+- **SEV1 (found + fixed during review):** AdGuard nuc8-1 crash loop, 1481 restarts, ~24h silent VIP1 failover. See entry above.
+- **SEV3 (observation, no action taken):** `media_bazarr` running at ~70% of its 512MB memory limit (360MB/512MB), no errors/restarts in 24h logs — stable but close to the ceiling. Worth bumping the limit if it starts OOM-killing.
+- **No action — known/accepted:** ZFS `newton` pool's one permanent error re-surfaced on the 2026-06-23 weekly scrub (CKSUM=2 symmetric across all 5 disks) — same already-diagnosed leaked dnode from the 2026-06-20 entry, not new corruption. `zpool clear` resets cosmetic counters but the head_errlog entry persists and will keep reappearing each scrub; this is expected.
+- **Clean:** No other containers on either node showed nonzero restart counts. Disk usage nuc8-1 37% (`/`), 7% (`/mnt/dockerData`); nuc8-2 56% (`/`). Load average low on both (<0.7). Both nodes up 3d21h (since the 2026-06-21 ~02:38 reboot visible in keepalived's init log).
+- **Already handled this session, not re-flagged:** Maintainerr healthcheck timing (fixed), Readarr removed.
+
+### Open Items
+- `flyctl auth login` still needed to pull Uptime Kuma 24h uptime/downtime stats — last attempted during the 2026-06-23 AdGuard incident, still not done.
+- Consider raising `media_bazarr`'s memory limit from 512m before it OOMs.
+
 ## 2026-06-24 (Readarr removed — service no longer wanted)
 
 ### Change
