@@ -3,6 +3,33 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-06-30 (AdGuard VIP2 blip — epic-games/Chrome kernel hard lockup on nuc8-2, CPU limit applied)
+
+### Problem
+AdGuard VIP2 (192.168.0.254, normally mastered on nuc8-2) went down briefly this morning. User reported it as a blip.
+
+### Diagnosis
+- `journalctl -u keepalived` on nuc8-2: 3-minute gap in VRRP advertisement timer backlog (~14:14–14:17 UTC) — the VRRP thread was completely starved for CPU.
+- `journalctl -k` (kernel ring buffer) on nuc8-2: hard lockup detected on CPUs 0, 1, and 3 at the same timestamp. Trace pointed to `.NET Finalizer` threads stuck in tight PAUSE/jump-back spin-wait loops — the GC finalizer busy-waiting under CPU starvation, not the actual root cause.
+- `systemctl status docker-<container-id>.scope` for `epic-games` (container 79f90e5bdd8c): `CPUUsage=314s` (5 minutes 14 seconds) at the moment of lockup, `MemoryPeak=1011793920` (~965MB). epic-games uses headless Chrome (via Puppeteer/Node.js) to claim free Epic Games titles on a cron schedule. Chrome startup is extremely CPU-intensive; with no CPU limit set, it consumed all 4 cores on nuc8-2.
+- Sonarr log: container restarted at 14:14 UTC — killed by the hard lockup (victim of starvation), not the cause.
+- .NET Finalizer spin-waits (Sonarr/Radarr/Prowlarr) were victims, not the root cause. The combination of Chrome bursting all 4 cores + .NET GC finalizer spin-waits created a CPU-starved livelock that triggered the watchdog.
+- keepalived's `check_adguard` missed 3+ consecutive health-check intervals during the lockup → `VI_ADGUARD2` dropped from priority 100→80 → nuc8-1 took MASTER for VIP2 → brief DNS blip during failover.
+
+### Fix
+Applied `--limit-cpu 1.5` to `media_epic-games` via `docker service update --limit-cpu 1.5 media_epic-games`. This caps Chrome at 1.5 of 4 cores, leaving at least 2.5 cores for keepalived VRRP and other services at all times.
+
+**IMPORTANT:** `docker-compose` v1 serializes `resources.limits.cpus` as a float in its config output; `docker stack deploy` rejects this with "must be a string". The CPU limit cannot be expressed in `media.yaml` and must be re-applied manually after every media stack redeploy:
+```
+docker service update --limit-cpu 1.5 media_epic-games
+```
+A comment in `media.yaml` (epic-games service block) documents this constraint.
+
+### Open Items
+- Whether to verify Uptime Kuma alerted on this VIP2 blip — still pending (see also the 2026-06-23 open item).
+
+---
+
 ## 2026-06-24 (AdGuard nuc8-1 crash loop — stale image digest, schema version mismatch, ~24h silent VIP1 failover)
 
 ### Problem
@@ -38,7 +65,7 @@ When recreating identical standalone containers across multiple nodes via floati
 - All other monitors 98.6–100% over 24h, consistent with normal noise (see Known False Positives in the review format doc).
 
 ### Open Items
-- Consider raising `media_bazarr`'s memory limit from 512m before it OOMs.
+- ~~Consider raising `media_bazarr`'s memory limit from 512m before it OOMs.~~ Done same day: bumped `x-lsio-nuc-limited` anchor in `media.yaml` from 512m → 1g (only Bazarr uses this anchor). Redeployed via `docker-compose -f media.yaml config | docker stack deploy -c - media`; confirmed new container running with `Mem limit: 1073741824 bytes`.
 
 ## 2026-06-24 (Readarr removed — service no longer wanted)
 

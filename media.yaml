@@ -43,7 +43,7 @@ x-lsio-nuc-limited: &lsio-nuc-limited
         - node.hostname == nuc8-1
     resources:
       limits:
-        memory: 512m
+        memory: 1g
 
 networks:
   default:
@@ -194,6 +194,8 @@ services:
       resources:
         limits:
           memory: 2g
+          # cpus: 1.5 — docker-compose v1 serializes this as float; docker stack deploy rejects it ("must be a string")
+          # Applied manually: docker service update --limit-cpu 1.5 media_epic-games
 
   plex-meta-manager:
     image: kometateam/kometa:nightly
