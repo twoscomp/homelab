@@ -197,6 +197,34 @@ services:
           # cpus: 1.5 — docker-compose v1 serializes this as float; docker stack deploy rejects it ("must be a string")
           # Applied manually: docker service update --limit-cpu 1.5 media_epic-games
 
+  # IPTV M3U proxy — emulates an HDHomeRun tuner for Plex/Jellyfin from the IPTorrents M3U+XMLTV.
+  # Provider playlist + EPG URLs are entered in the Threadfin web UI (:34400/web) and persisted
+  # to the conf bind-mount — they are account secrets ("Do Not Share"), NOT stored in this repo.
+  threadfin:
+    image: fyb3roptik/threadfin:latest
+    container_name: threadfin
+    environment:
+      - PUID=568
+      - PGID=1001
+      - TZ=${TZ}
+    volumes:
+      - ${DATADIR}/threadfin/conf:/home/threadfin/conf
+      - ${DATADIR}/threadfin/temp:/tmp/threadfin
+    ports:
+      - "34400:34400"
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == nuc8-1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+      resources:
+        limits:
+          memory: 512m
+          # cpus: — docker-compose v1 serializes cpus as float; docker stack deploy rejects it ("must be a string").
+          # Apply post-deploy if streams strain the node: docker service update --limit-cpu 1.0 media_threadfin
+
   plex-meta-manager:
     image: kometateam/kometa:nightly
     container_name: plex-meta-manager
