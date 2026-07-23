@@ -14,7 +14,7 @@ networks:
 services:
   teslamate:
     <<: *deploy
-    image: teslamate/teslamate:2.1.1
+    image: teslamate/teslamate:4.0.1
     restart: always
     environment:
       - ENCRYPTION_KEY=${TESLAMATE_ENCRYPTION_KEY}
@@ -26,6 +26,10 @@ services:
       - TZ=${TZ}
       - PUID:${PUID}
       - PGID:${PGId}
+      - TESLA_API_HOST=https://fleet-api.prd.na.vn.cloud.tesla.com
+      - TESLA_AUTH_HOST=https://auth.tesla.com
+      - TESLA_AUTH_PATH=/oauth2/v3
+      - TESLA_AUTH_CLIENT_ID=${TESLA_AUTH_CLIENT_ID}
 #    ports:
 #      - 4000:4000
     volumes:

@@ -991,3 +991,52 @@ Sonarr has no published host port. Must reach via overlay network from another c
   - Removed letsencrypt files: `live/npm-4/`, `archive/npm-4/`, `renewal/npm-4.conf`.
 - Scaled NPM back to 1. Proxy host id=10 (grafana.whatasave.space) was already soft-deleted previously.
 - **Lesson learned**: NPM holds an exclusive SQLite write lock while running. Direct DB writes require scaling the service to 0 first. The NPM REST API is the preferred approach if admin credentials are known.
+
+---
+
+## 2026-07-23 — TeslaMate Not Connecting: Root Cause Found (Not Yet Fixed)
+
+### Symptom
+User reported TeslaMate dashboard (`teslamate.swarm.local`) shows cars disconnected.
+
+### Investigation
+- `teslamate_teslamate` (image `teslamate/teslamate:2.1.1`) and `smarthomeserver_tesla-http-proxy` are both swarm services placed on **nuc8-2** (not nuc8-1 — `docker logs`/`docker ps` for these must be run via `ssh nuc8-2`, not nuc8-1; `docker service ps <name>` on the nuc8-1 manager shows which node to SSH into). Both services showed `1/1 Running`, last (re)started ~2026-07-19 (consistent with a nuc8-2 reboot, not a crash).
+- TeslaMate container logs (`docker logs`) show **every single API call failing since the earliest retained log line** (2026-07-19 03:32:31), immediately on startup:
+  ```
+  GET https://owner-api.teslamotors.com/api/1/products -> 403
+  TeslaApi.Error: "forbidden, see https://developer.tesla.com/docs/fleet-api"
+  ```
+  This repeats for every poll cycle (~30s) for both cars, indefinitely. Token refresh via `auth.tesla.com` succeeds (200) — the OAuth token itself is fine, it's the API host that's rejected.
+- By contrast, `smarthomeserver_tesla-http-proxy` (used separately, likely by Home Assistant's Tesla/Powerwall integration) is correctly forwarding requests to `https://fleet-api.prd.na.vn.cloud.tesla.com` — the new Fleet API host — and working.
+- **Root cause**: TeslaMate 2.1.1 hardcodes calls to the legacy `owner-api.teslamotors.com`, which Tesla has blocked for third-party apps in favor of the Fleet API. TeslaMate didn't gain Fleet API support until **v4.0.0** (June 2024, per GitHub release notes / issues #5384, #5399, #5419). We are 2 major versions behind (`4.0.1` is current stable as of this investigation).
+- **Prerequisite already satisfied**: Fleet API requires hosting a public key at `https://<domain>/.well-known/appspecific/com.tesla.3p.public-key.pem`. Confirmed this already resolves correctly at `https://tesla.whatasave.space/...` (served via the tesla-http-proxy's nginx share + NPM, cert already exists per the 2026-04-23 NPM cert audit above). So domain verification is not a blocker.
+- `tesla-http-proxy`'s `CLIENT_ID`/`CLIENT_SECRET` env vars in `docker-compose.yaml` are literal placeholder strings (`'client_id'`/`'client_secret'`), not real values — but this proxy only signs/forwards commands using a bearer token supplied by the caller (HA), so it doesn't need real OAuth app credentials itself. This is NOT relevant to the TeslaMate issue but was confirmed while investigating so it's not mistaken for a bug later.
+- No `TESLA_*` / `CLIENT_ID` / `CLIENT_SECRET` vars exist in `.env` for TeslaMate — it's running on TeslaMate's default built-in OAuth app, which is what's being blocked.
+
+### Fix (not yet applied — needs user action, logged here for continuity)
+1. Bump `teslamate/teslamate` image tag in `teslamate.yaml` from `2.1.1` to `4.0.1` (or `latest`) and redeploy. Postgres requirement (16.7+/17.3+, introduced in TeslaMate v2.0.0) is already satisfied — `teslamate_database` runs `postgres:17-trixie`.
+2. User must register a Tesla Developer app in the [Tesla Developer Portal](https://developer.tesla.com) (or confirm TeslaMate v4's setup wizard can use a shared/public app — needs checking during upgrade) with Fleet API scopes: `vehicle_device_data`, `vehicle_location`, `vehicle_charging_cmds`, `vehicle_cmds` (as needed), and register the callback matching TeslaMate's config.
+3. Re-authenticate TeslaMate via its "Sign in with Tesla" flow after upgrade so it obtains a Fleet API token with the right scopes (per GitHub issue #5419, a common post-migration failure is a token missing `vehicle_location` scope — re-check scopes if data still doesn't populate after upgrade).
+4. Take a Postgres/volume backup before the version bump given the 2-major-version jump (2.1.1 → 4.0.1) may include DB migrations.
+
+### Status: Root cause identified, fix not applied. Awaiting user decision on upgrade timing (see AGENTS.md Tesla troubleshooting note for the standing playbook).
+
+---
+
+## 2026-07-23 (continued) — TeslaMate Fleet API Migration Completed
+
+Follow-up to the entry above — user approved proceeding. Full step-by-step is now in `AGENTS.md` under "Playbook: TeslaMate / Tesla Fleet API"; this entry covers what happened and why, for anyone reconstructing the timeline.
+
+**Image bump:** `teslamate.yaml` bumped `teslamate/teslamate` `2.1.1` → `4.0.1` on both the repo and nuc8-1's checkout (nuc8-1 is the deploy source of truth; local repo `.env`/checkout can lag it). Pre-upgrade backup: `~/teslamate-bak/teslamate-20260723-150327.sql.gz` (332M) on nuc8-2. Migration included two BRIN index rebuilds on the 19M-row `positions` table, ~9 minutes total — expected, not a hang.
+
+**Registering a dedicated Fleet API app:** Tried reusing `tesla.whatasave.space` (the domain already registered for Home Assistant's `tesla_custom`/`tesla-http-proxy` app) for TeslaMate's new app — Tesla's `partner_accounts` API rejected it: `"Public key hash has already been taken"`. Each app needs its own domain/keypair. Set up `teslamate.whatasave.space` instead: new EC keypair (`~/teslamate-bak/tesla-fleet-key/` on nuc8-1, private key unused by TeslaMate but kept for hygiene), served via a new NPM proxy host (id 70, isolated directory `/mnt/dockerData/nginx-package-manager/data/teslamate-proxy/`, mirroring the existing `tesla.whatasave.space` host's `advanced_config` pattern), and a new Cloudflare Tunnel public hostname (tunnel runs in remotely-managed mode — dashboard-configured, no local ingress file).
+
+**The costly bug — wrong token endpoint:** Following the community setup guide (GitHub issue teslamate-org/teslamate#5384), exchanged the authorization code at `https://auth.tesla.com/oauth2/v3/token`. This returned `200` with a valid `access_token` but **no `refresh_token` and `scope: null`** — silently degraded, no error to signal the problem. Burned two single-use auth codes (each expires in minutes) before finding, via the user's old setup notes for the HA integration, that Tesla's current docs specify the token endpoint should be `https://fleet-auth.prd.vn.cloud.tesla.com/oauth2/v3/token`. Re-did the exchange against the correct host — `refresh_token` present immediately. The `auth.tesla.com` host still works fine for the one-time `client_credentials` partner/domain-registration call; the broken behavior is specific to the `authorization_code` grant.
+
+**Post-signin cascading DB failure:** Once real tokens were in and TeslaMate started actually polling, the DB hit 75% CPU / tens of GB of block I/O and the app fell into a crash-restart loop (`DBConnection.ConnectionError`, `tcp recv (idle): closed`, connection-pool checkout timeouts). Root cause: the v4 migrations' BRIN-index replacement left TeslaMate's hot-path query (`positions WHERE car_id = $1 ORDER BY date DESC LIMIT 1`, run on every car-process (re)start) with no efficient index — full scan on a 19M-row table, repeatedly, in a tight crash-retry loop. Fix: scaled `teslamate_teslamate` to 0 to stop the retry storm, ran `CREATE INDEX CONCURRENTLY positions_car_id_date_index ON positions (car_id, date DESC);` on the idle DB, scaled back to 1. CPU dropped to idle immediately after.
+
+**Streaming API reconnect loop:** Separately, once cars were polling, `car_id=2` fell into a `Stream connecting/disconnecting` + `Tokens expired` loop several times a second — Fleet API has no equivalent to the old realtime owner-api websocket. Fixed via direct DB update (no clean UI toggle found): `UPDATE car_settings SET use_streaming_api = false;` (shared table across all cars via `cars.settings_id`), then `docker service update --force teslamate_teslamate`.
+
+**Final state:** TeslaMate `4.0.1` on Fleet API, both cars recognized with correct online/offline status, clean logs, DB idle, no reconnect loops. Confirmed stable over several minutes of observation post-fix.
+
+### Status: Resolved.

@@ -20,4 +20,4 @@ Full operational SOP and infrastructure context is in [`AGENTS.md`](./AGENTS.md)
 
 ## Ops Log
 
-Update `ops-log.md` in the repo root after any infrastructure change or ops review finding. See `AGENTS.md` §7 for the full ops review SOP and Kuma queries.
+Update `ops-log.md` in the repo root after any infrastructure change or ops review finding. See `AGENTS.md` → "Ops Review Process" for the full SOP and Kuma queries.
