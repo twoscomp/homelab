@@ -26,10 +26,25 @@ services:
       - TZ=${TZ}
       - PUID:${PUID}
       - PGID:${PGId}
-      - TESLA_API_HOST=https://fleet-api.prd.na.vn.cloud.tesla.com
-      - TESLA_AUTH_HOST=https://auth.tesla.com
-      - TESLA_AUTH_PATH=/oauth2/v3
-      - TESLA_AUTH_CLIENT_ID=${TESLA_AUTH_CLIENT_ID}
+      # Our own Fleet API app (works, tested 2026-07-23/24 — see AGENTS.md playbook).
+      # Parked 2026-07-25: racked up ~$15/day in Tesla Fleet API billing against our
+      # own developer app. Owner-api (tested same day) is also a dead end — Tesla broke
+      # 3rd-party owner-api token generation (teslamate-org/teslamate#5296). Switched to
+      # MyTeslaMate's free proxy instead (moves cost off our own app, see AGENTS.md for
+      # the privacy trade-off). Uncomment these 4 + comment out the MyTeslaMate block
+      # below + re-run the OAuth flow in AGENTS.md to switch back to our own app.
+      # - TESLA_API_HOST=https://fleet-api.prd.na.vn.cloud.tesla.com
+      # - TESLA_AUTH_HOST=https://auth.tesla.com
+      # - TESLA_AUTH_PATH=/oauth2/v3
+      # - TESLA_AUTH_CLIENT_ID=${TESLA_AUTH_CLIENT_ID}
+      # MyTeslaMate free third-party proxy (active as of 2026-07-25)
+      - TESLA_API_HOST=https://api.myteslamate.com
+      - TESLA_AUTH_HOST=https://api.myteslamate.com
+      - TESLA_AUTH_PATH=/api/oauth2/v3
+      - TOKEN=${MYTESLAMATE_TOKEN}
+      - TESLA_WSS_HOST=wss://streaming.myteslamate.com
+      - TESLA_WSS_TLS_ACCEPT_INVALID_CERTS=true
+      - TESLA_WSS_USE_VIN=true
 #    ports:
 #      - 4000:4000
     volumes:
@@ -66,6 +81,7 @@ services:
       - TZ=${TZ}
       - PUID:${PUID}
       - PGID:${PGID}
+      - GF_FEATURE_TOGGLES_provisioning=true
 #    ports:
 #      - 3000:3000
     volumes:

@@ -3,6 +3,51 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-08-04 (Kometa nightly-run errors — IMDb blocking scrapers, upstream/unresolved)
+
+### Problem
+User noticed `media_plex-meta-manager` (Kometa, formerly Plex-Meta-Manager) erroring on its nightly runs (`KOMETA_TIME=03:15,15:15` on nuc8-1).
+
+### Diagnosis
+- `docker logs media_plex-meta-manager` (nuc8-1) covering the last 6 runs (72h) showed every single run ending with an Error Summary — but the runs are **not** crashing or failing wholesale: of 100+ collections/overlays processed per run, only ~7-8 IMDb-list-sourced collections come back with 0 items (`Alien / Predator`, `Conjuring Universe`, `DC Universe`, `Fast & Furious`, `Marvel Cinematic Universe`, `Star Trek`, `Star Wars Universe`, `X-Men Universe`, plus `Asian TV`, `Movies for Angie`, and the IMDb Top 250 Movies/TV charts). Everything else (TVDb mapping, posters, overlays, Trakt/MDBList-sourced collections) completes normally each run.
+- Root cause: IMDb itself is now 403-blocking Kometa's `imdb_list`/`imdb_chart` builders — both the GraphQL endpoint (`Expecting value: line 1 column 1 (char 0)` from parsing an empty/HTML 403 body as JSON) and the legacy HTML-scraping fallback (`__NEXT_DATA__` script tag missing → `IndexError: list index out of range`) are getting blocked.
+- Confirmed via web search this is a live, open upstream bug, not specific to our config: [Kometa-Team/Kometa#3446 — "IMDb chart fallback raises IndexError when `__NEXT_DATA__` is missing"](https://github.com/Kometa-Team/Kometa/issues/3446), reported ~5 days prior to this investigation. IMDb has tightened bot-blocking broadly; Kometa's maintainers have not yet shipped a fix (the open issue is only about turning the crash into a graceful error, not restoring access).
+- Also noted: the running container (`kometateam/kometa:nightly`) hadn't repulled since 2026-08-01 despite the mutable `:nightly` tag — it self-reported running `2.4.4-build69` against a newest-available `2.4.6-build8`. Not the root cause (IMDb blocking is server-side) but worth staying current.
+
+### Fix
+Force-repulled the image to pick up the latest nightly build: `docker service update --image kometateam/kometa:nightly --force media_plex-meta-manager` (ran on nuc8-1; user explicitly approved since the auto-mode classifier flags `docker service update` as a risky action). Converged cleanly to a new digest. This does **not** fix the underlying IMDb blocking — that's out of our control — but ensures we're running whatever incremental error-handling improvements land upstream.
+
+### Open Items
+- **Not actionable on our end** — monitor Kometa#3446 / release notes for an actual fix (e.g., updated headers, retry/backoff, or an official IMDb API integration replacing HTML scraping). No further action unless the error footprint grows to affect non-IMDb collections too, which would indicate a different problem.
+
+---
+
+## 2026-07-31 (Overseerr false MEDIA_FAILED Discord notifications — apiRequestTimeout too low)
+
+### Problem
+User reported Overseerr posting "request failed" notifications to Discord, but the request actually goes through anyway (movie/show gets added and eventually becomes available).
+
+### Diagnosis
+- `docker logs media_overseerr` (nuc8-1) showed a real `MEDIA_FAILED` notification event, not a webhook-delivery failure — Overseerr itself believed the request failed.
+- Root cause in the same log stream: `[Radarr API]: Error retrieving movie by TMDB ID {"errorMessage":"timeout of 10000ms exceeded"}` / same for Sonarr — Overseerr's call to Radarr/Sonarr's "add + search now" endpoint exceeded its 10s API timeout.
+- Radarr/Sonarr logs (nuc8-2) confirmed the add actually completes: metadata refresh, disk scan, and release search against 13 active indexers all proceed normally and the title becomes available later (`MEDIA_AVAILABLE` fires afterward) — Radarr/Sonarr just take >10s to return the synchronous add-with-search response, especially with many active indexers.
+- This Overseerr fork (`ghcr.io/seerr-team/seerr`, seerr@3.3.0) exposes this as a configurable **Settings → General → API Request Timeout** (`network.apiRequestTimeout` in `settings.json`, default `10000`ms) — confirmed by grepping `/app/dist/api/servarr/base.js` and the built frontend chunk for `apiRequestTimeout`.
+
+### Fix
+Raised `network.apiRequestTimeout` from `10000` to `30000` via the live Settings API (admin API key from `settings.json` → `main.apiKey`, `X-Api-Key` header, `wget` from inside the container against `localhost:5055` — this image has no `curl`, only `wget`, consistent with the Alpine/musl `wget`-not-`curl` convention elsewhere in this repo):
+```
+wget -qO- --header="X-Api-Key: <key>" --header="Content-Type: application/json" \
+  --post-data='{"apiRequestTimeout":30000}' http://localhost:5055/api/v1/settings/network
+```
+Verified in `/servarrData/overseerr/config/settings.json` (bind mount) and via a re-`GET` of the same endpoint. No container restart required — settings changes made through the running API apply immediately (the singleton settings object is updated and saved in-process).
+
+**Gotcha hit along the way:** first tried editing `/servarrData/overseerr/config/settings.json` directly on disk and then `docker restart`ing the container to pick it up. This did NOT work — the change was silently reverted back to `10000` on disk after restart. Root cause not fully isolated, but most likely the outgoing container's own shutdown/save path (or the incoming container's own default-merge) raced with and clobbered the direct file edit during the restart window (`docker ps` briefly showed both old and new task containers "Up" simultaneously). **Lesson: don't hand-edit Overseerr's `settings.json` and restart — always go through the live Settings API while the service is running**, same category of live-file mutation risk as the Grafana SQLite `grafana.db` incident earlier this session.
+
+### Open Items
+- None — resolved. If false MEDIA_FAILED notifications recur, check whether 30s is still too low (e.g., if more indexers get added) before raising further.
+
+---
+
 ## 2026-06-30 (AdGuard VIP2 blip — epic-games/Chrome kernel hard lockup on nuc8-2, CPU limit applied)
 
 ### Problem
@@ -1040,3 +1085,27 @@ Follow-up to the entry above — user approved proceeding. Full step-by-step is 
 **Final state:** TeslaMate `4.0.1` on Fleet API, both cars recognized with correct online/offline status, clean logs, DB idle, no reconnect loops. Confirmed stable over several minutes of observation post-fix.
 
 ### Status: Resolved.
+
+---
+
+## 2026-07-24 — TeslaMate Grafana: Broken Datasource, Then Locked-Out Admin
+
+### Symptom
+User reported Grafana ("no postgres db configured as a source"), then all dashboards showing "No data"/errors.
+
+### Investigation
+- `teslamate_grafana` is on `teslamate/grafana:latest`, which turned out to be **Grafana v13.0.1+security-01** — a much newer Grafana than this image has historically shipped. Boot logs showed `provisioning.dashboard` and `provisioning.alerting` both running normally, but **no `provisioning.datasources` line ever appeared** — that subsystem silently never ran.
+- Tried the obvious fix: the image bakes in `GF_FEATURE_TOGGLES_provisioning=false` as a default env var. Overrode it to `true` in `teslamate.yaml`. This **did not fix datasource provisioning** — it only registered a new `provisioning.grafana.app` API group; classic file-based datasource provisioning still never ran. Root cause is deeper in how v13 restructured provisioning, not something this toggle controls. **Left the override in place** (harmless) but it was a dead end for this specific problem — don't waste time on it again.
+- Checked further and found a **datasource already existed** (id=1, `TeslaMate`, pointing at `teslamate_database:5432`) — it long-predated this session's changes. Its connection health-checked fine (`Database Connection OK`), yet the UI showed the exact error: *"You do not currently have a default database configured for this data source."*
+- **Actual root cause:** the datasource's `database` field was only set at the legacy top-level key, not inside `jsonData.database`. Newer Grafana Postgres plugin versions require it nested under `jsonData` and silently ignore(d) the old top-level field. This existing datasource predated whatever plugin version made that change and was never migrated.
+- **Fix:** in the Grafana UI, Connections → Data sources → TeslaMate → set **Database name** field to `teslamate` → Save & test. User did this directly; confirmed via API afterward (`jsonData.database` now populated, health check `OK`, dashboards loading).
+
+### Self-inflicted admin lockout (avoid repeating this)
+While investigating, ran `grafana cli admin reset-admin-password` twice more via ad-hoc `docker run` (not `docker exec` on the live service) to test in "isolation":
+- First attempt failed fast with a misleading `unable to open database file: out of memory (14)` — actually a **permissions error**: forgot `--user 1000:1001` to match the real service's configured user, so the container ran as a UID that couldn't write to the (0640-permissioned) `grafana.db`.
+- Second attempt (with correct user) **hung indefinitely with zero output**. Root cause: this image's entrypoint is `/run.sh`, which does **not** treat `grafana cli ...` passed as the container command as a one-shot CLI invocation — it ignores that and boots a **second full Grafana server** instead (confirmed: it fully booted, opened its HTTP port, and just sat there as a live server, indistinguishable from "hung" until checked with `docker ps`). Had to `docker kill` the orphaned container manually (`docker run --rm` does not clean up until the process the container is doing appears to exit, i.e. never here).
+- **The only method that reliably works for this image:** `docker exec <already-running-service-container> grafana cli admin reset-admin-password <newpass>` — i.e. exec into the live, swarm-managed container, never `docker run` a fresh one for CLI subcommands with this image.
+- Also confirmed along the way: `GF_AUTH_BASIC_ENABLED=false` is set on this instance, so HTTP Basic Auth (`-u user:pass` / URL-embedded creds) **always returns 401** regardless of correct credentials — use the cookie-based `POST /login` flow (JSON body `{"user":...,"password":...}`, save cookies, reuse for subsequent API calls) instead.
+- Unnecessarily scaling `teslamate_grafana` to 0 and back to 1 mid-investigation (to "isolate" a DB access) coincided with the user's saved password stopping working — possibly a race between the scale-down and an in-flight password write. Lesson: avoid scaling a stateful service down/up mid-troubleshooting unless actually necessary; it cost real time and a second lockout here.
+
+### Status: Resolved. Dashboards loading correctly. Playbook added to `AGENTS.md`.
