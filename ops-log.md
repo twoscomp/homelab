@@ -59,8 +59,28 @@ Repair: `REINDEX`/`VACUUM` both failed with the same malformed error. `.recover`
 - Swap 1.75G → 1.2G.
 - Backup continuity confirmed: every migrated directory now appears under `swarm-sync/servarrData_nuc8-1` with today's timestamps — Syncthing's existing `/servarrData` folder picked them up with no config change.
 
+### Follow-up (same day): stale Syncthing folder paused, and a correction to the CPU figures
+
+**Correction — the CPU numbers quoted above and in the earlier Overseerr entry were wrong in kind.** `ps -eo pcpu` reports a process's *average CPU since it started*, not current usage. Both daemons were 60-day-old processes, so "syncthing 14.7%" and "glusterfsd 8.5%" were lifetime averages that could not move regardless of what we changed — which is exactly why syncthing read 14.7% before *and* after the migration. Use `top -bn2` (second sample) or a `/proc/<pid>/stat` utime+stime delta for real instantaneous CPU.
+
+Measured properly after the migration: **glusterfsd, and both glusterfs clients, are at 0.0%** — the volume is genuinely idle now that nothing mounts it.
+
+**Syncthing:** nuc8-1's config (root-owned, `/root/.local/state/syncthing/config.xml`) had two folders, `/mnt/dockerData` and `/servarrData`, both `sendreceive` to peer `truenas`. nuc8-2 only ever had `/servarrData` — one node syncing the replicated volume was sufficient. Since `/mnt/dockerData` is now frozen stale data, its folder was **paused** via the REST API (`PATCH /rest/config/folders/9ppvg-pdxgb {"paused":true}`) rather than deleted, so it is reversible and no data was removed.
+
+Syncthing briefly hit 31% hashing the ~3 GB that arrived under `/servarrData`, then settled to **8.0%**. `/servarrData` now reports `state: idle`, 25,153 files, 5.53 GB, `needFiles 0`, `needBytes 0` — the migrated data is fully replicated to TrueNAS.
+
+### Final measured state
+
+| metric | before | after |
+|---|---|---|
+| load average (4 cores) | 14.76 | **2.59** |
+| io PSI `some avg10` | 79.45 | **15.35** |
+| io PSI `full avg10` | 65.07 | **14.37** |
+| CPU idle | 13.9% | **72.2%** |
+| CPU iowait | 60.8% | **22.6%** |
+| glusterfsd (instantaneous) | — | **0.0%** |
+
 ### Still open
-- `syncthing` is still at 14.7% CPU and `glusterfsd` at 8.5% — Syncthing still scans `/mnt/dockerData`, which is now **frozen stale data**. Repointing it is the next task.
 - `gv0` still running, bricks intact. Decommission only after a week of stability.
 - Dead data not yet deleted: `komga/` and `tracearr/` on the brick, and the orphaned 9.1 GB `swarm-sync/servarrData/` (stale since 2026-03-10).
 - SQLite WAL checkpoints still pending (overseerr 4.15 MB WAL vs 1 MB db; komga tasks-wal 4.1 MB).
