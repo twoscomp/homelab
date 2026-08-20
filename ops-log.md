@@ -80,10 +80,29 @@ Syncthing briefly hit 31% hashing the ~3 GB that arrived under `/servarrData`, t
 | CPU iowait | 60.8% | **22.6%** |
 | glusterfsd (instantaneous) | — | **0.0%** |
 
+### Follow-up: dead-data cleanup and SQLite WAL checkpoints
+
+**WAL checkpoints.** Two databases had write-ahead logs larger than the database itself. For each: stop the service, **poll until `docker ps` reports zero containers** (the crowdsec lesson — `docker service scale -d` returns immediately), `PRAGMA integrity_check`, then `PRAGMA wal_checkpoint(TRUNCATE)`, then restart.
+
+| database | db size | WAL before | ratio | WAL after |
+|---|---|---|---|---|
+| `komga/config/tasks.sqlite` | 348 KB | 4,128,272 | 11.9x | **0** |
+| `overseerr/config/db/db.sqlite3` | 1.0 MB | 4,152,992 | 3.9x | **0** |
+| `komga/config/database.sqlite` | 81 MB | 0 | — | 0 |
+
+Both passed `integrity_check: ok` before and after. Services back in 5s each; komga returns HTTP 200, overseerr HTTP 307 (its normal login redirect). Remaining WALs are all healthy (bazarr 0.08x, cross-seed 0.07x, lidarr 0.02x) and were left alone.
+
+**Syncthing conflict debris — much larger than expected.** A single conflict event on 2026-03-09→11 had left **79 `*sync-conflict*` files totalling 265 MB** across `/servarrData`, including a 148 MB `tautulli.sync-conflict-*.db`, a 23 MB lidarr DB copy, and ~50 lidarr debug logs. All were losing-side copies from that merge; the live files have run fine for five months. Deleted with `find /servarrData -name '*sync-conflict*' -type f -delete`. Newest was 2026-03-11 — confirmed none recent before deleting.
+
+**Dead Gluster directories.** `komga/` (43 MB, untouched since 2024-09-13, superseded by the live copy on local disk) and `tracearr/` (empty) removed **through the FUSE mount at `/mnt/dockerData`, never the brick** — deleting from a brick directly is unsupported and corrupts volume state. Verified the brick reflected the removal afterwards. Brick now 4.9 GB.
+
+**Not done — needs root on TrueNAS.** The orphaned `swarm-sync/servarrData/` (9.1 GB, 45,252 files, stale since 2026-03-10) could not be deleted: the files are owned `apps:apps` and the `dlin` SSH account is in `apps-plus(1001)`, not `apps`. `find -delete` failed with permission denied on every file, so **nothing was partially removed** — all 45,252 files remain intact. Confirmed safe to delete when someone has root: it has **no `.stfolder` marker**, which is Syncthing's required per-folder marker, so no folder is configured for that path and deletion cannot propagate to any peer. The 28 daily ZFS snapshots retain it regardless. Run as root: `rm -rf /mnt/newton/swarm-sync/servarrData`.
+
+Note `swarm-sync/servarrData_nuc8-1` grew 2.2 GB → 4.2 GB — that is the migrated service data arriving, as intended.
+
 ### Still open
 - `gv0` still running, bricks intact. Decommission only after a week of stability.
-- Dead data not yet deleted: `komga/` and `tracearr/` on the brick, and the orphaned 9.1 GB `swarm-sync/servarrData/` (stale since 2026-03-10).
-- SQLite WAL checkpoints still pending (overseerr 4.15 MB WAL vs 1 MB db; komga tasks-wal 4.1 MB).
+- Orphaned 9.1 GB `swarm-sync/servarrData/` on TrueNAS — needs root to delete (see follow-up above).
 - Optional: move NPM to nuc8-2 (load 0.65 vs nuc8-1's) so losing the busy node keeps ingress up. Would need crowdsec and tesla-http-proxy to move with it.
 
 ### Status: Migration complete and verified. Gluster retained, unused, pending decommission.
