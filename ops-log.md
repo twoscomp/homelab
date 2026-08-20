@@ -126,10 +126,41 @@ Live data on the dataset went ~18G -> **8.0G**. Note the pool does not free that
 
 Backups verified still running after the change: both node folders wrote to TrueNAS at 11:37, `needFiles=0`, TrueNAS connected on `192.168.0.196:22000`. (An earlier reading of "truenas connected: 0" was a malformed grep of the connections JSON, not a real disconnect.)
 
+### Follow-up: consistent SQLite dumps on a cron schedule
+
+**The problem being solved.** In WAL mode the main `.db` is only written during a checkpoint, so backing up the `.db` alone captures the database as of the *last checkpoint* — and checkpoints fire on size (1000 pages, ~4 MB of page images), not time. A quiet database can therefore sit unchanged in backup for weeks. Copying `.db` + `-wal` together is worse: Syncthing copies each file at a different moment, and a mismatched pair restores as `database disk image is malformed` — precisely what took out crowdsec earlier today. `VACUUM INTO` sidesteps both: one read transaction, a complete self-consistent output, no service downtime.
+
+**Implementation.** `scripts/sqlite-dump.sh`, installed to `/usr/local/bin/sqlite-dump.sh` on both nodes, scheduled via `/etc/cron.d/sqlite-dump` (matching the existing `docker-cleanup` house style):
+
+```
+30 2 * * * root /usr/local/bin/sqlite-dump.sh 2>&1 | logger -t sqlite-dump
+```
+
+02:30 is deliberate — it lands **ahead of the 03:00 ZFS snapshot**, so every snapshot captures a known-good dump set rather than a roll of the dice. Dumps go to `/servarrData/_dbdump/`, inside the folder Syncthing already ships one-way to TrueNAS.
+
+Design points worth keeping: files are identified by the `SQLite format 3` magic header rather than by extension (several services ship `.db` files that are not SQLite); output is written to `.tmp` and moved into place, since `VACUUM INTO` refuses to overwrite and this also means a snapshot can never catch a half-written dump; a vacuum failure is logged rather than silently skipped, because a database that cannot be vacuumed is a genuine early warning of corruption.
+
+**First run: 14 dumps on nuc8-1 (317.3 MB), 7 on nuc8-2 (683.8 MB), zero failures.** Timing is a non-issue — `VACUUM INTO` on the live 77 MB komga DB took 12.6s with the service running.
+
+Verified rather than assumed: every dump passes `PRAGMA integrity_check: ok` with sensible table counts (komga 52, sonarr 40, tautulli 24, bazarr 17). crowdsec dumped 37 MB -> 1 MB, which looked alarming until checked — row counts match exactly (machines 1, bouncers 1, decisions 2700, alerts 1) and `PRAGMA freelist_count` showed **9,195 of 9,488 pages free**, i.e. the DB was 97% empty space after expiring ~41,000 decisions since the morning rebuild. Legitimate compaction.
+
+**Syncthing ignores.** Added `/servarrData/.stignore` on both nodes for `*-wal`, `*-shm`, `*.tmp`, `*sync-conflict*` — confirmed loaded via `GET /rest/db/ignores`. This stops the torn-pair hazard recurring at source.
+
+**Sync verified.** Both folders report `completion=100%`, `needBytes=0`. TrueNAS `du` showed only 117M/122M against 317/684 MB local, which is **ZFS compression, not missing data** — logical sizes via `find -printf %s` match exactly on both sides, as do file counts.
+
+**Left undone — needs root on TrueNAS.** 18 stale `*-wal`/`*-shm` files remain on the backup from before the ignore rules existed. Ignoring them stops new ones but does not remove existing ones, and they are a live footgun: a restore that finds a `.db` beside a stale `-wal` gets the malformed error this whole exercise exists to prevent. They are owned `dlin:dlin` but sit in root-owned directories, and deleting a file requires write permission on the *parent directory* — so 2 were removed and 18 refused. Clear them with:
+
+```
+find /mnt/newton/swarm-sync/servarrData_nuc8-1 /mnt/newton/swarm-sync/servarrData_nuc8-2 \
+  \( -name '*-wal' -o -name '*-shm' \) -delete
+```
+
+**Restoring from a dump:** the dump *is* an ordinary SQLite database. Stop the service, copy it over the live `.db`, delete any `-wal`/`-shm` sitting beside it, start the service.
+
 ### Still open
 - `gv0` still running, bricks intact. Decommission only after a week of stability.
 - **TrueNAS side is still `sendreceive`** — could not be changed; its Syncthing config is unreadable without root there. Set it to `receiveonly` so a local edit on TrueNAS cannot create divergence. The nucs being `sendonly` already blocks the dangerous direction.
-- Live SQLite is still copied mid-write (`.db` + `-wal` + `-shm`), which is what caused the March and May conflict events. Proper fix is a scheduled `VACUUM INTO` / `.backup` dump per database, then sync the dump — this is the real "backup configuration" work.
+- 18 stale `-wal`/`-shm` files on the TrueNAS backup need root to delete (command in the follow-up above).
 - Remove the paused `dockerData` Syncthing folder and its 2.7G TrueNAS copy once `gv0` is decommissioned.
 - Optional: move NPM to nuc8-2 (load 0.65 vs nuc8-1's) so losing the busy node keeps ingress up. Would need crowdsec and tesla-http-proxy to move with it.
 
