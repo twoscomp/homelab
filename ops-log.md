@@ -108,9 +108,29 @@ Net effect of the checkpoints: ~8 MB of disk reclaimed, partly regrowing. **The 
 
 Note `swarm-sync/servarrData_nuc8-1` grew 2.2 GB → 4.2 GB — that is the migrated service data arriving, as intended.
 
+### Follow-up: Syncthing made one-way, orphan removed
+
+**Backup could write back to production.** Both `/servarrData` folders were `sendreceive`, meaning TrueNAS could push changes — including deletions — *into* live service data. That is a mirror, not a backup. Set both nuc8-1 (`gym2n-vuevl`) and nuc8-2 (`6su6j-mcyrz`) to **`sendonly`** via the REST API (`PATCH /rest/config/folders/<id> {"type":"sendonly"}`). The nodes are now authoritative and will not accept remote changes.
+
+**Divergence surfaced immediately, which is the point.** With `sendonly` active, nuc8-2 reported `needFiles=4` / 48 MB: radarr and sonarr `*sync-conflict*` copies dated **2026-05-19** that existed only on the TrueNAS side — nuc8-2 has zero local conflict files. (The 265 MB cleanup earlier covered nuc8-1 only.) Verified every divergent entry was conflict debris (`non-conflict=0`) before acting, then cleared them with `POST /rest/db/override` — the designed action for a `sendonly` folder, which makes the sender's state win. Result: `state=idle needFiles=0 needBytes=0 errors=0`.
+
+**TrueNAS orphan deleted** (user ran it as root; the `dlin` account lacks the `apps` group, and `!`-prefixed commands get no TTY for `sudo`, so it needed the TrueNAS web shell). `swarm-sync/` now holds only the three legitimate folders:
+
+| folder | size | state |
+|---|---|---|
+| `servarrData_nuc8-1` | 4.2G | live, fresh |
+| `servarrData_nuc8-2` | 1.4G | live, fresh |
+| `dockerData` | 2.7G | frozen; sender paused, remove at gv0 decommission |
+
+Live data on the dataset went ~18G -> **8.0G**. Note the pool does not free that space immediately: `auto-2026-08-20_03-00` still contains all 45,252 deleted files, so space returns only as snapshots holding those blocks expire — and the data stays recoverable until then.
+
+Backups verified still running after the change: both node folders wrote to TrueNAS at 11:37, `needFiles=0`, TrueNAS connected on `192.168.0.196:22000`. (An earlier reading of "truenas connected: 0" was a malformed grep of the connections JSON, not a real disconnect.)
+
 ### Still open
 - `gv0` still running, bricks intact. Decommission only after a week of stability.
-- Orphaned 9.1 GB `swarm-sync/servarrData/` on TrueNAS — needs root to delete (see follow-up above).
+- **TrueNAS side is still `sendreceive`** — could not be changed; its Syncthing config is unreadable without root there. Set it to `receiveonly` so a local edit on TrueNAS cannot create divergence. The nucs being `sendonly` already blocks the dangerous direction.
+- Live SQLite is still copied mid-write (`.db` + `-wal` + `-shm`), which is what caused the March and May conflict events. Proper fix is a scheduled `VACUUM INTO` / `.backup` dump per database, then sync the dump — this is the real "backup configuration" work.
+- Remove the paused `dockerData` Syncthing folder and its 2.7G TrueNAS copy once `gv0` is decommissioned.
 - Optional: move NPM to nuc8-2 (load 0.65 vs nuc8-1's) so losing the busy node keeps ingress up. Would need crowdsec and tesla-http-proxy to move with it.
 
 ### Status: Migration complete and verified. Gluster retained, unused, pending decommission.
