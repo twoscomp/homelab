@@ -90,7 +90,15 @@ Syncthing briefly hit 31% hashing the ~3 GB that arrived under `/servarrData`, t
 | `overseerr/config/db/db.sqlite3` | 1.0 MB | 4,152,992 | 3.9x | **0** |
 | `komga/config/database.sqlite` | 81 MB | 0 | — | 0 |
 
-Both passed `integrity_check: ok` before and after. Services back in 5s each; komga returns HTTP 200, overseerr HTTP 307 (its normal login redirect). Remaining WALs are all healthy (bazarr 0.08x, cross-seed 0.07x, lidarr 0.02x) and were left alone.
+Both passed `integrity_check: ok` before and after. Services back in 5s each; komga returns HTTP 200, overseerr HTTP 307 (its normal login redirect).
+
+**Correction — this was overstated.** These WALs were not malfunctioning. All the DBs run `journal_mode=wal` with `wal_autocheckpoint=1000` pages at `page_size=4096`, so SQLite checkpoints at **1000 x 4096 = ~4.0 MB**. The two "problem" WALs measured 4,128,272 and 4,152,992 bytes — i.e. sitting *just above the normal threshold*, exactly where a healthy WAL parks. A checkpoint copies pages back and resets the WAL for reuse; it does not shrink the file, so a busy DB's WAL lives at ~4 MB permanently. Only `TRUNCATE` shrinks it, and it regrows.
+
+The control case: **bazarr still carries a 4.4 MB WAL right now on local disk, working fine.** The "11.9x ratio" flagged earlier was a bad metric — it was 11.9x only because komga's `tasks.sqlite` is a tiny 348 KB task queue, so the ratio measured how small the *database* was, not how sick the WAL was. What matters is absolute size against the ~4 MB threshold.
+
+An oversized WAL is genuinely diagnostic only when it runs *well past* the threshold (tens or hundreds of MB), which indicates checkpoints are blocked — usually by a long-lived reader holding an old read snapshot (a checkpoint cannot reset past the oldest open snapshot), by slow `fsync` letting writes outrun checkpoints, or by an unclean shutdown. None of that was happening here.
+
+Net effect of the checkpoints: ~8 MB of disk reclaimed, partly regrowing. **The storage migration was the actual fix** (iowait 60.8% -> 22.6%); the WAL work was cosmetic and should not have been listed as a performance item.
 
 **Syncthing conflict debris — much larger than expected.** A single conflict event on 2026-03-09→11 had left **79 `*sync-conflict*` files totalling 265 MB** across `/servarrData`, including a 148 MB `tautulli.sync-conflict-*.db`, a 23 MB lidarr DB copy, and ~50 lidarr debug logs. All were losing-side copies from that merge; the live files have run fine for five months. Deleted with `find /servarrData -name '*sync-conflict*' -type f -delete`. Newest was 2026-03-11 — confirmed none recent before deleting.
 
