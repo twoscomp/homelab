@@ -157,12 +157,28 @@ find /mnt/newton/swarm-sync/servarrData_nuc8-1 /mnt/newton/swarm-sync/servarrDat
 
 **Restoring from a dump:** the dump *is* an ordinary SQLite database. Stop the service, copy it over the live `.db`, delete any `-wal`/`-shm` sitting beside it, start the service.
 
+### Decision: NPM stays on nuc8-1 (evaluated 2026-08-20, not moved)
+
+The earlier proposal suggested moving `nginx-proxy-manager` to nuc8-2 for availability. Re-measured after the storage migration and **decided against it.**
+
+**Performance no longer justifies it.** nuc8-1 now sits at load 0.80, **93.2% idle, 0.0% iowait**, memory PSI `some avg10=0.07`. The 1.3 GiB of swap still shown is *cold residue* from the pre-migration crunch, not live pressure — `vmstat` shows `si`/`so` at ~0 across samples, `swpd` flat, and free memory rising. Nothing is stalling.
+
+**NPM is not a significant consumer** — 88.6 MiB, sixth on the node behind komga (321 MiB), bazarr (201), overseerr (163), lidarr (108), maintainerr (103).
+
+**The coupling cost is high and one branch breaks a live security control.** Moving NPM forces two other services to follow:
+- `crowdsec` bind-mounts NPM's log directory, which is node-local now, so it must move too. But its LAPI is published `mode=host`, and nuc8-1 runs `crowdsec-firewall-bouncer.service` — **active, 4 live iptables chains** — configured with `api_url: http://192.168.0.101:8080`, nuc8-1's own address. Moving crowdsec silently stops that enforcement unless the bouncer config is rewritten as well.
+- `tesla-http-proxy` bind-mounts NPM's `tesla-proxy` directory *and* hardcodes `PROXY_HOST='nuc8-1.localdomain'`, which is tied to the registered Tesla Fleet API domain (see the 2026-07-24 entry for how costly that registration was).
+
+**The availability argument inverts on this cluster's own history.** The premise was "put ingress on the node less likely to fail." The node with a documented **kernel hard lockup** is nuc8-2 (2026-06-30, hard lockup on CPUs 0/1/3 from epic-games/Chrome starving all four cores) — and epic-games still runs there. nuc8-1 has no comparable failure. Moving ingress to nuc8-2 is lateral at best.
+
+**If rebalancing is ever wanted**, the better candidate is `komga`: 321 MiB (largest consumer on the node), described by the user as rarely used, and with zero service coupling — its only shared dependency is the `truenas-media` NFS volume, which is already defined on both nodes. That is 3.6x NPM's memory for none of the risk. Not done, because nothing currently warrants it.
+
 ### Still open
 - `gv0` still running, bricks intact. Decommission only after a week of stability.
 - **TrueNAS side is still `sendreceive`** — could not be changed; its Syncthing config is unreadable without root there. Set it to `receiveonly` so a local edit on TrueNAS cannot create divergence. The nucs being `sendonly` already blocks the dangerous direction.
 - 18 stale `-wal`/`-shm` files on the TrueNAS backup need root to delete (command in the follow-up above).
 - Remove the paused `dockerData` Syncthing folder and its 2.7G TrueNAS copy once `gv0` is decommissioned.
-- Optional: move NPM to nuc8-2 (load 0.65 vs nuc8-1's) so losing the busy node keeps ingress up. Would need crowdsec and tesla-http-proxy to move with it.
+- ~~Move NPM to nuc8-2~~ — evaluated and rejected, see the decision above. Revisit only if nuc8-1 load returns.
 
 ### Status: Migration complete and verified. Gluster retained, unused, pending decommission.
 
