@@ -1,7 +1,29 @@
 # Homelab Ops Log
 
 Running record of ops review findings and changes. Reviewed weekly.
-See [memory/feedback_ops_review_format.md] for review process and SQL queries.
+See [memory/feedback_ops_review_format.md] for review process and SQL queries.## 2026-08-20 (finding: `newton/media` has no ZFS snapshots, unlike `newton/swarm-sync`)
+
+Surfaced while replacing kids' DVD rips in the Plex movie library. Deleting 2.55 GB of superseded files from `/mnt/newton/media/media/movies` prompted a check for a safety net, and there is none:
+
+| dataset | snapshots |
+|---|---|
+| `newton/swarm-sync` | **28** (daily 03:00, verified current) |
+| `newton/media` | **0** |
+
+So the backup target is snapshotted but **the media library itself is not**. Any accidental deletion or overwrite under `/mnt/newton/media` is immediately unrecoverable. That is the dataset holding the entire Plex library.
+
+This was safe in the moment — the replacements were verified in place before anything was removed, and the source MakeMKV rips still exist on the workstation's Games drive — but it is only safe because of that specific care, not because of any property of the system.
+
+Worth deciding deliberately rather than by default. A media library is large and mostly re-acquirable, so nightly snapshots with a long retention may not be worth the space; but even a short retention (a few days) would cover the realistic failure mode, which is a bad bulk operation rather than slow corruption. `newton/media` is 50T with 36T used, so a handful of short-retention snapshots costs almost nothing until blocks actually churn.
+
+**Also:** four movies were added to Radarr (ids 2381-2383 plus reuse of pre-existing 2374/2375/2376/2377), all **unmonitored**. That matters because all three quality profiles have `upgradeAllowed=true` — a monitored add would let Radarr search for "better" releases and replace hand-made DVD encodes with web rips. Any future manual Radarr additions of personal/ripped media should be added unmonitored for the same reason.
+
+One Radarr quirk recorded for next time: a movie whose TMDb entry has **no release year** (here `Totally Trucks Garbage Monsters`, folder `... ()`) fails import with `Unable to parse file` — the parser has no year to anchor on and cannot infer quality, even with a `[SDTV]` tag in the filename. Fix is to force it through `POST /api/v3/command` with `name: ManualImport` and an explicit `quality` object taken from `/api/v3/qualitydefinition`.
+
+### Status: Informational. No snapshot task created — needs a retention decision.
+
+---
+
 ## 2026-08-20 (GlusterFS → local ext4 migration: all 9 DATADIR services moved, load 14.76 → 2.60)
 
 ### What changed
