@@ -21,8 +21,8 @@ services:
       - '81:81'
       - '443:443'
     volumes:
-      - ${DATADIR}/nginx-package-manager/data:/data
-      - ${DATADIR}/nginx-package-manager/letsencrypt:/etc/letsencrypt
+      - ${LOCALDATA}/nginx-package-manager/data:/data
+      - ${LOCALDATA}/nginx-package-manager/letsencrypt:/etc/letsencrypt
     healthcheck:
       test: ["CMD", "/bin/check-health"]
       interval: 10s

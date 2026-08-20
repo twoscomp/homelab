@@ -30,18 +30,26 @@ services:
 
     volumes:
       - type: bind
-        source: /mnt/dockerData/tesla-http-proxy/data
+        source: /servarrData/tesla-http-proxy/data
         target: /data
       # Webserver root for the $DOMAIN virtual server. Change the path according to your webserver setup. Path must exist or this container won't start
       - type: bind
-        source: /mnt/dockerData/nginx-package-manager/data/tesla-proxy
+        source: /servarrData/nginx-package-manager/data/tesla-proxy
         target: /share/nginx
       # Path to tesla_http_proxy directory inside /config on Home Assistant instance. Change according to your HA setup. Path must exist or this container won't start
       - type: bind
-        source: /mnt/dockerData/tesla-http-proxy/homeassistant
+        source: /servarrData/tesla-http-proxy/homeassistant
         target: /share/home-assistant
 
     ports:
       - 4430:443
       - 8099:8099
 
+
+    # Pinned 2026-08-20: all three binds moved off GlusterFS to node-local ext4.
+    # Must stay on nuc8-1 — one bind reaches into nginx-proxy-manager's data dir
+    # (which is manager-constrained to nuc8-1), and PROXY_HOST is hardcoded to this host.
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == nuc8-1

@@ -19,7 +19,7 @@ services:
       - TZ=${TZ:-America/Chicago}
     volumes:
       - adguard-work:/opt/adguardhome/work
-      - ${DATADIR:-/mnt/dockerData}/adguard/confdir:/opt/adguardhome/conf
+      - ${LOCALDATA:-/servarrData}/adguard/confdir:/opt/adguardhome/conf
     healthcheck:
       test: ["CMD", "nslookup", "google.com", "127.0.0.1"]
       interval: 30s

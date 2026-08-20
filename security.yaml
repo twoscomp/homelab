@@ -27,7 +27,7 @@ version: "3.9"
 # NPM real IP passthrough (applied globally, NOT per proxy host):
 #   Traffic path: client → Cloudflare → cloudflared container (10.0.1.0/24) → NPM
 #   cloudflared adds CF-Connecting-IP header with the real client IP.
-#   NPM custom config at ${DATADIR}/nginx-package-manager/data/nginx/custom/server_proxy.conf
+#   NPM custom config at ${LOCALDATA}/nginx-package-manager/data/nginx/custom/server_proxy.conf
 #   trusts the overlay network (10.0.1.0/24) and all Cloudflare IP ranges, then reads
 #   real_ip_header CF-Connecting-IP so nginx substitutes the real client IP in logs.
 #   NPM includes this file in every proxy host server block via the server_proxy[.]conf pattern.
@@ -73,10 +73,10 @@ services:
         protocol: tcp
         mode: host
     volumes:
-      - ${DATADIR}/crowdsec/data:/var/lib/crowdsec/data
-      - ${DATADIR}/crowdsec/config:/etc/crowdsec
+      - ${LOCALDATA}/crowdsec/data:/var/lib/crowdsec/data
+      - ${LOCALDATA}/crowdsec/config:/etc/crowdsec
       # Read NPM access logs for threat detection
-      - ${DATADIR}/nginx-package-manager/data/logs:/var/log/npm:ro
+      - ${LOCALDATA}/nginx-package-manager/data/logs:/var/log/npm:ro
     deploy:
       replicas: 1
       placement:

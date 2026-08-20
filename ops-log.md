@@ -2,6 +2,173 @@
 
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
+## 2026-08-20 (GlusterFS → local ext4 migration: all 9 DATADIR services moved, load 14.76 → 2.60)
+
+### What changed
+Every service that stored data on the GlusterFS volume (`DATADIR=/mnt/dockerData`) now uses node-local ext4 under a new `LOCALDATA=/servarrData`. `gv0` is **still running and still holds the original data** — nothing was deleted, so this is fully reversible.
+
+Manifests: all `${DATADIR}` → `${LOCALDATA}` in `media.yaml`, `security.yaml`, `tier1.yaml`, `adguard-standalone.yaml`, plus **three literal `/mnt/dockerData` binds** in `docker-compose.yaml` (tesla-http-proxy) that a `${DATADIR}` grep does not catch. Pre-migration copies of all five files are in the session scratchpad.
+
+### Why local disk was safe — the replication was buying nothing
+Measured churn per brick directory before moving anything:
+
+| dir | size | files | changed 30d | verdict |
+|---|---|---|---|---|
+| adguard | 23M | 7 | **0** | static config |
+| tesla-http-proxy | 68K | 7 | **0** | static config |
+| teslamate | 3.3M | 2 | 0 | pinned nuc8-2 |
+| komga | 43M | 80 | 0 | **dead since 2024-09-13** |
+| tracearr | 8K | 0 | 0 | **empty** |
+| epic-games | 16M | 94 | 2 | pinned nuc8-2 |
+| maintainerr | 3.1M | 38 | 10 | pinned nuc8-1 |
+| threadfin | 4.1M | 21 | 18 | pinned nuc8-1 |
+| plex-meta-manager | 2.3G | 2439 | 59 | pinned nuc8-1 |
+| crowdsec | 116M | 135 | 18 | rebuildable |
+| cross-seed | 167M | 1125 | 112 | non-critical |
+| recyclarr | 193M | 5264 | 2243 | pinned nuc8-1 |
+| nginx-package-manager | 429M | 8954 | 165 | manager-constrained |
+
+Total churn across the whole 18,166-file volume is ~150 files/day.
+
+**The decisive finding: `nginx-proxy-manager` and `crowdsec` are constrained to `node.role == manager`, and nuc8-1 is the sole manager.** They could never migrate, so Gluster gave them nothing. Only `cross-seed` and `tesla-http-proxy` were genuinely unpinned; both are non-critical and are now pinned to nuc8-1.
+
+AdGuard's shared dir is 7 files with zero writes in 30 days — and hosting it on Gluster made DNS *more* fragile, since a degraded volume would stop either instance restarting. Each node now has its own local copy.
+
+### Hidden coupling found during the migration
+- `crowdsec` bind-mounts `nginx-package-manager/data/logs` read-only → must stay co-located with NPM.
+- `tesla-http-proxy` bind-mounts `nginx-package-manager/data/tesla-proxy` **and** has `PROXY_HOST='nuc8-1.localdomain'` hardcoded → was always nuc8-1-bound in practice.
+
+### Method (low downtime)
+rsync pre-copy with services live → stop service → delta rsync → `stack deploy --resolve-image changed` → verify. Reads were taken from the **FUSE mount, not the brick**: `gluster volume heal gv0 info summary` showed **1 entry pending heal on nuc8-2's brick**, so a direct brick read could have captured unhealed state.
+
+Downtime: media stack effectively zero (background jobs). **The NPM/crowdsec/tesla-http-proxy window was ~9 minutes, not the 1–2 estimated** — NPM's 8,953 files took far longer to delta-rsync through FUSE than predicted. AdGuard was done one node at a time; both VIPs (`.253` nuc8-1, `.254` nuc8-2) stayed assigned and DNS never dropped.
+
+### Incident: crowdsec SQLite corruption
+After cutover crowdsec crash-looped: `database disk image is malformed` → machine-version update failed → `authenticate watcher: incorrect Username or Password` → fatal.
+
+Two causes, and the first was mine:
+1. **`docker service scale -d` returns immediately.** The `-d` flag detaches, so `sleep 6` was not enough for the task to actually stop, and the delta rsync copied a live database — the giveaway was 136 files copied vs 135 at source, the extra being `crowdsec.db-journal`. **Always poll until `docker ps` shows zero containers before rsyncing a database.**
+2. **The source on Gluster was already corrupt** — `PRAGMA integrity_check` on the untouched original reported `Freelist: size is 0 but should be 19` and `row 162 missing from index decision_start_ip_end_ip`. Exactly the SQLite-on-FUSE-replica failure mode that `PLAN-rebalance-services.md` already warns about.
+
+Repair: `REINDEX`/`VACUUM` both failed with the same malformed error. `.recover` was unavailable — this sqlite3 build lacks the `sqlite_dbpage` virtual table. `.dump` worked (65,141 lines, 35M, no `ROLLBACK` marker) and the rebuilt DB passes `integrity_check: ok` with every row intact: machines 1, bouncers 1, decisions 43,621, alerts 2,760. Pre-repair copy kept at `crowdsec.db.bak-premigration`.
+
+### Result
+- **24/24 services at full replicas**; both AdGuard instances healthy; zero containers mounting `/mnt/dockerData` on either node.
+- **Load average 14.76 → 2.60.**
+- **io PSI `full avg10` 65.07 → 39.43**, `some avg10` 79.45 → 42.08.
+- Swap 1.75G → 1.2G.
+- Backup continuity confirmed: every migrated directory now appears under `swarm-sync/servarrData_nuc8-1` with today's timestamps — Syncthing's existing `/servarrData` folder picked them up with no config change.
+
+### Still open
+- `syncthing` is still at 14.7% CPU and `glusterfsd` at 8.5% — Syncthing still scans `/mnt/dockerData`, which is now **frozen stale data**. Repointing it is the next task.
+- `gv0` still running, bricks intact. Decommission only after a week of stability.
+- Dead data not yet deleted: `komga/` and `tracearr/` on the brick, and the orphaned 9.1 GB `swarm-sync/servarrData/` (stale since 2026-03-10).
+- SQLite WAL checkpoints still pending (overseerr 4.15 MB WAL vs 1 MB db; komga tasks-wal 4.1 MB).
+- Optional: move NPM to nuc8-2 (load 0.65 vs nuc8-1's) so losing the busy node keeps ingress up. Would need crowdsec and tesla-http-proxy to move with it.
+
+### Status: Migration complete and verified. Gluster retained, unused, pending decommission.
+
+---
+
+## 2026-08-20 (Overseerr "slow to load" — image updated to Seerr 3.4.1; real cause is nuc8-1 I/O saturation)
+
+### Symptom
+User reported Overseerr "appearing to load really slow each time" and asked for an update.
+
+### Update performed
+Running image was ~2 months old (`ghcr.io/seerr-team/seerr:latest@sha256:c92d2dc1…`); registry had a newer build. Pulled first (so the download ran while the old container kept serving), then updated the single service:
+
+```
+docker pull ghcr.io/seerr-team/seerr:latest
+docker service update --image ghcr.io/seerr-team/seerr:latest --force media_overseerr
+```
+
+Deliberately **not** a full `docker-compose config | docker stack deploy` — that re-resolves `:latest` for every service in `media.yaml` and would have bumped a dozen services at once on an already-saturated host. Now on `sha256:f4768de5…`, **Seerr 3.4.1**, `updateAvailable: false`, converged 1/1, 0 restarts, migrations clean.
+
+The pull took **2m31s** for 877MB and first boot took **~3 minutes** (05:50:01 container start → 05:53:09 "Server ready on port 5055") — both symptoms of the underlying disk problem, not of Overseerr.
+
+### The update was not the fix — nuc8-1 is I/O saturated
+Overseerr was never the bottleneck. At time of investigation, nuc8-1 (4 cores, 3.8 GB RAM):
+
+- **Load average 14.76** — but only ~13.9% idle and **60.8% iowait**. Sum of all container CPU was under 15%, so this is disk, not compute.
+- **PSI: `io some avg10=79.45`, `io full avg10=65.07`** — roughly 65% of wall time with *every* task stalled on I/O.
+- **1.75 GB swapped out** with 240 MB RAM free. Biggest swap residents: `java` (Komga) 522 MB, **`node` (Overseerr) 99 MB**, 4× `python3`, 4× `nginx`.
+- `jbd2/dm-0-8` (ext4 journal thread) parked in `D` state — classic sustained-saturation signature.
+- Top host CPU consumers are **`syncthing` (14.7%, running 42 days)**, `glusterfsd` (8.5%), `glusterfs` (4.0%) — all host processes, not containers.
+
+That 99 MB of swapped-out Overseerr `node` process is the most likely explanation for the specific complaint: pages get evicted while idle, and the next visit has to fault them back off a disk that is already stalled ~65% of the time. Hence "slow **each time**" (i.e. each time after a gap) rather than uniformly slow.
+
+### Storage layout worth knowing
+- `SERVARRDIR=/servarrData/` → **local ext4** (`/dev/mapper/ubuntu--vg-ubuntu--lv`). Overseerr's config/DB lives here.
+- `DATADIR=/mnt/dockerData` → **GlusterFS** (`localhost:/gv0`, FUSE). Most other appdata lives here, and **Syncthing syncs this path** — Gluster + Syncthing over the same tree is the I/O storm.
+- Overseerr is therefore *not* in Syncthing's path. The `settings.sync-conflict-20260311-*.json` and `db.sync-conflict-20260310-*.sqlite3-wal` files in its config dir are **stale root-owned leftovers from 2026-03-10/11**, not active conflicts. Safe to delete; left in place for now.
+
+### Post-update measurements (app is genuinely fast)
+- Inside the container: API `0.00s`, main page `0.06s`, HTTP 200.
+- Public path (cloudflared → NPM → overseerr), `https://overseerr.whatasave.space`: full 301 KB page **0.17–0.29s**, `/api/v1/status` **0.35s**.
+
+So it is fast *right now* — but the container was just restarted and is fully resident in RAM. **Expect the slowness to return** as it gets swapped out again, unless memory/I/O pressure on nuc8-1 is addressed.
+
+### Open items
+- **P1 — nuc8-1 memory pressure.** 3.8 GB is not enough for the current service count; 1.75 GB is swapped. Either move services to nuc8-2 or reduce the footprint. Komga (`java`, 522 MB swapped) is the single largest offender and has no memory limit.
+- **P1 — I/O contention from Syncthing + GlusterFS on `/mnt/dockerData`.** Worth deciding whether Syncthing needs to watch the whole Docker appdata tree, or whether scan intervals can be relaxed.
+- **P2 — Overseerr SQLite WAL is 4× the DB**: `db.sqlite3` 1.0 MB vs `db.sqlite3-wal` 4.15 MB. Not checkpointing properly; a `wal_checkpoint(TRUNCATE)` would likely help read latency. Not done — touches a live DB, needs a maintenance window.
+- **P3 — delete stale March sync-conflict files** in `/servarrData/overseerr/config/` and `.../config/db/`.
+
+### Gotchas hit this session (both cost time)
+- **nuc8-1's login shell is `fish`, not bash.** `ssh nuc8-1 '<bash syntax>'` fails with fish parse errors on `for`/`$()`/heredocs. Use `ssh nuc8-1 bash -s <<'EOF' … EOF`.
+- **Cannot curl a container's overlay IP from the host namespace.** The host isn't on the `smarthomeserver` overlay, so `curl http://10.0.1.x:5055` returns `status=000, ttfb=0` (no connection) and looks exactly like "app is hung". Test with `docker exec <cid> wget …` or via the public URL instead.
+
+### Status: Update complete and verified. Underlying host I/O problem NOT fixed — see Open Items.
+
+---
+
+## 2026-08-08 (TeslaMate MyTeslaMate pairing fix; HA Fleet API cost analysis — no migration)
+
+### Problem 1: TeslaMate drives/charges not recording since 07-25
+User noticed TeslaMate's Grafana dashboard and Home Assistant data hadn't reflected any new trips or charges in ~2 weeks.
+
+### Diagnosis
+- `SELECT max(start_date) FROM drives/charging_processes` for both cars showed nothing since 2026-07-25 — the exact day `teslamate.yaml` was switched from our own Fleet API app to the free MyTeslaMate proxy (see 2026-07-24 entry below).
+- Raw `positions` rows were still trickling in (dozens/day vs. thousands/day pre-switch), masking the problem on cursory dashboard checks.
+- `docker logs teslamate_teslamate` (nuc8-2) showed **every** `vehicle_data` GET returning HTTP 408, and **zero** `wake_up` calls in 96h — car_id=1 ("The Last Light") had made **zero** API requests of any kind in that window, despite the correct env vars (`TESLA_WSS_HOST` etc.) already being present in `teslamate.yaml`.
+- Root cause: MyTeslaMate requires each vehicle to be explicitly **"paired" on their own web dashboard (fleet page)** before telemetry streaming activates for that VIN — a manual account-side step separate from the env var config. Without it, TeslaMate falls back to REST-only polling, which can't reliably catch a sleeping car without an explicit wake — hence the 100% 408 rate and the 2-week data gap.
+
+### Fix
+User paired "The Last Light" (car_id=1) on MyTeslaMate's dashboard. **Not paired: car_id=2, which belongs to the user's in-laws** — deliberately left out. Confirmed immediately after pairing: car_id=1 started making real `vehicle_data` attempts for the first time in 96h+ of logs, and position freshness dropped to ~2 minutes old. Actual confirmation (a new `drives`/`charging_processes` row) is still pending the car's next real trip/charge — not yet observed as of this writing.
+
+### Open Items
+- Confirm car_id=1 gets a new `drives` or `charging_processes` row on its next real trip/charge (definitive proof pairing fixed it).
+- User wants car_id=2 (in-laws' vehicle) removed from TeslaMate once car_id=1 is verified working — needs a decision at that point: unpair only (keeps historical data, stops new data) vs. fully delete the car and its history from TeslaMate's DB.
+
+### Aside: is MyTeslaMate's paid "API plan" worth it for TeslaMate itself?
+MyTeslaMate's in-app upsell claims the free tier gives only "a minimal telemetry set (fewer fields, longer intervals)" vs. paid's "5× more fields... plus live refresh and vehicle commands." Checked this against our own data rather than the marketing copy:
+- **Commands: real gap.** Free tier is data-only, no command capability via MyTeslaMate. Irrelevant here — TeslaMate never sends commands, and HA's command path was already kept off MyTeslaMate (see cost analysis above).
+- **"5× more fields": not a real gap for us.** Queried `positions.tpms_pressure_*` (a commonly-gated "extra" field) — populated in 2,808/6,317 recent rows for car 1 and 3,061/3,061 for car 2, most recent within minutes. That comes from the REST `vehicle_data` call, which already returns the full field set (drive_state/charge_state/climate_state/vehicle_state/vehicle_config) on the free token — confirmed directly from a raw fetch during this session's earlier debugging. The "5×" claim describes the live-stream payload specifically, not what TeslaMate can actually capture via REST.
+- **"Longer intervals": true but low-impact.** Only affects live-map smoothness during an active drive (TeslaMate supplements the stream with full-field REST polling regardless), not whether trips/charges get logged.
+- **Conclusion: not worth subscribing.** Free tier already gives TeslaMate everything it needs.
+
+---
+
+### Problem 2: Cost analysis — should Home Assistant's direct Fleet API usage move to MyTeslaMate too?
+HA currently sources Tesla data via a combination of MyTeslaMate MQTT and direct Fleet API calls (through our own `tesla-http-proxy`, a separate registered Tesla developer app/client_id from both TeslaMate's app and MyTeslaMate — see AGENTS.md's `tesla-http-proxy` note). User asked whether it's worth migrating that direct-API portion to MyTeslaMate entirely.
+
+### Analysis
+- `docker logs smarthomeserver_tesla-http-proxy` (nuc8-2) full-day breakdown (2026-08-07): **8,484** `energy_sites/site_info` + **8,475** `energy_sites/live_status` calls (Powerwall/solar, polled every 10s, 24/7) + 1,420 `products` calls + only **93** `vehicles/.../vehicle_data` calls (both cars combined) + **0** vehicle commands.
+- MyTeslaMate's API plan is pay-as-you-go (500 credits/€1 ≈ $0.0022/credit; vehicle data = 2 credits, command = 1, wake = 20) — no free tier on that plan.
+- Modeled cost if migrated: vehicle-only portion (93 calls/day, 0 commands) ≈ **$12/month** — immaterial either way. If the energy-site polling were also migrated at the same per-call rate: ≈ **$2,250/month** — would be a major net-new cost.
+- **User checked Tesla's own developer console (Application Usage tab) for this app and confirmed real billed "Data" usage is only ~100-400 requests/day — matching the vehicle_data + `products` volume, not the ~17,000/day of energy-site calls.** Energy site endpoints are apparently not currently metered/billed by Tesla at all on this app (consistent with research: Tesla hasn't announced pricing for energy-site data as of this writing).
+
+### Conclusion: Do not migrate
+- Direct Fleet API usage as currently configured is effectively free (small billed volume, comfortably within Tesla's $10/month per-account developer discount).
+- Migrating the energy-site polling to MyTeslaMate would convert genuinely free traffic into ~$2,250/month of real cost — a pure net loss.
+- Migrating just the vehicle portion saves/costs nothing meaningful either way (~$12/month), so not worth the churn of re-registering commands/virtual-key setup under MyTeslaMate's official Tesla Fleet HA integration.
+- **Residual risk, not urgent:** the "energy data is free" status is Tesla's current unannounced behavior, not a commitment — same category of risk that eventually hit vehicle data billing. The 10-second Powerwall polling interval is more aggressive than needed for a home dashboard regardless of cost; worth throttling (e.g. to 30-60s) as cheap insurance next time that HA integration is touched, but not an active problem today.
+
+### Open Items
+- None urgent. Revisit only if Tesla announces energy-site API billing, or if the Powerwall polling interval is being tuned for other reasons anyway.
+
+---
 
 ## 2026-08-04 (Kometa nightly-run errors — IMDb blocking scrapers, upstream/unresolved)
 

@@ -70,7 +70,6 @@ services:
     restart: unless-stopped
 
   komga:
-    <<: *deploy-nuc
     image: gotson/komga:latest
     container_name: komga
     volumes:
@@ -80,6 +79,18 @@ services:
         source: truenas-media
         target: /data
     user: "568:1001"
+    # Rarely used. Ran unlimited until 2026-08-20, so the container-aware JVM sized max heap
+    # off the host's 3.8G (~950m) and lazily ballooned to 584m of *swap* on a box already at
+    # ~65% IO stall. The cap also makes the JVM recompute max heap as 25% of the limit (~256m).
+    # NOTE: deploy: is written out in full rather than using *deploy-nuc — a YAML merge key is
+    # overridden wholesale by an explicit key, so reusing the anchor here would drop placement.
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == nuc8-1
+      resources:
+        limits:
+          memory: 1g
     restart: unless-stopped
 
   radarr:
@@ -160,7 +171,7 @@ services:
     init: true
     user: 568:1001
     volumes:
-      - ${DATADIR}/recyclarr/config:/config
+      - ${LOCALDATA}/recyclarr/config:/config
     environment:
       - TZ=America/Chicago
       - CRON_SCHEDULE=5 * * * *
@@ -172,18 +183,25 @@ services:
     container_name: cross-seed
     user: 568:1001
     volumes:
-        - ${DATADIR}/cross-seed/config:/config
+        - ${LOCALDATA}/cross-seed/config:/config
         - type: volume
           source: truenas-media
           target: /downloads
     command: daemon # this enables the daemon
+    # Pinned 2026-08-20: config moved off GlusterFS to node-local ext4, so this
+    # service can no longer float. It was one of only two DATADIR services that
+    # genuinely could migrate — the rest were already node- or manager-constrained.
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == nuc8-1
     restart: unless-stopped
 
   epic-games:
     image: charlocharlie/epicgames-freegames:latest
     container_name: epic-games
     volumes:
-      - ${DATADIR}/epic-games/config:/usr/app/config
+      - ${LOCALDATA}/epic-games/config:/usr/app/config
     deploy:
       placement:
         constraints:
@@ -208,8 +226,8 @@ services:
       - PGID=1001
       - TZ=${TZ}
     volumes:
-      - ${DATADIR}/threadfin/conf:/home/threadfin/conf
-      - ${DATADIR}/threadfin/temp:/tmp/threadfin
+      - ${LOCALDATA}/threadfin/conf:/home/threadfin/conf
+      - ${LOCALDATA}/threadfin/temp:/tmp/threadfin
     ports:
       - "34400:34400"
     deploy:
@@ -233,7 +251,7 @@ services:
       - TZ=America/Chicago #optional
       - KOMETA_TIME=03:15,15:15
     volumes:
-      - ${DATADIR}/plex-meta-manager/config:/config
+      - ${LOCALDATA}/plex-meta-manager/config:/config
     deploy:
       placement:
         constraints:
@@ -252,7 +270,7 @@ services:
     container_name: maintainerr
     user: 568:1001
     volumes:
-      - ${DATADIR}/maintainerr:/opt/data
+      - ${LOCALDATA}/maintainerr:/opt/data
     deploy:
       placement:
         constraints:
