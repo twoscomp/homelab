@@ -3,6 +3,57 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-01 (Kuma still showing services down — the missing-overlay-IP defect was systemic, not isolated)
+
+### Symptom
+After the outage was declared resolved, user reported **many services still down in Kuma**. All 24 services were `1/1`, no unhealthy containers, and every public endpoint served correctly — so once again nothing in `docker service ls` reflected the problem.
+
+### Root cause
+The missing-overlay-IP defect found on `media_overseerr` during the outage was **not isolated to that one service**. A scan of every container on both nodes found **eight** still carrying an empty `IPAddress` on the `smarthomeserver` overlay, all survivors of the 02:21 mass restart:
+
+`monitoring_heartbeat-pusher`, `media_bazarr`, `media_lidarr`, `media_mylar3`, `media_recyclarr`, `media_tautulli`, `media_threadfin`, `media_plex-meta-manager`
+
+**The decisive one was `monitoring_heartbeat-pusher` itself.** It is the source of Kuma's push monitors, and with no overlay IP it could not reach anything over the overlay network. Its old task's log is unambiguous:
+
+```
+pnwqwjls1u62 | DOWN: http://media_mylar3:8090
+pnwqwjls1u62 | DOWN: http://media_lidarr:8686
+pnwqwjls1u62 | DOWN: http://tier1_nginx-proxy-manager:81
+pnwqwjls1u62 | DOWN: http://media_bazarr:6767
+pnwqwjls1u62 | DOWN: http://media_maintainerr:6246
+```
+
+Two compounding failures: the pusher could not reach the overlay, **and** several of its targets had no IP either. So Kuma's "down" reports were accurate — the monitoring path was broken, not the services.
+
+### Fix
+`docker service update --force` on all eight (in two batches, with pauses — the node has only 3.8 GB), then `nginx -s reload` in NPM to clear cached resolution failures. A re-scan of every container on both nodes now returns **zero** missing IPs, and three consecutive heartbeat cycles show **14/14 targets UP, zero DOWN**.
+
+`adguard` reports no IP on both nodes and always will — it is on `host` networking. Not a defect; exclude `host=` and `ingress=` from this scan.
+
+### The durable lesson
+**A Swarm task can come back from a restart with no overlay IP and still count as a healthy `1/1` replica.** Swarm DNS then has no record for it, so anything resolving it by service name gets `Host not found` while every orchestrator-level indicator stays green. This has now caused three distinct user-visible symptoms in one night — an app 502, an unbound published port, and a wholesale monitoring blackout.
+
+**After any mass restart, do not probe a few endpoints and declare victory — scan every container:**
+
+```bash
+for c in $(docker ps -q); do
+  name=$(docker inspect --format '{{.Name}}' $c | sed 's|^/||')
+  docker inspect --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}' $c \
+  | tr ' ' '\n' | while read -r n; do
+      [ -z "$n" ] && continue
+      case "$n" in ingress=*|host=*) continue;; esac
+      [ -z "${n#*=}" ] && echo "  MISSING IP: $name [$n]"
+    done
+done
+```
+
+Run it on **both** nodes. My own error was fixing the two services whose symptoms I happened to observe rather than scanning for the class of defect — which left the monitoring stack itself broken for roughly two hours.
+
+### Not verified
+Kuma's own database was **not** checked — `flyctl` has no access token in this environment (`flyctl auth login` required). Everything above is confirmed from the pusher's logs and container inspection. Push monitors should clear within their heartbeat interval; a stale monitor after that would need separate investigation.
+
+### Status: Resolved (pending Kuma-side confirmation).
+
 ## 2026-09-01 (gv0 decommissioned; orphan container removed — XFS error storm ended, load 4.10 → 1.06)
 
 Follow-up to the outage entry below — user approved both actions.
