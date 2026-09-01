@@ -20,21 +20,41 @@ User asked whether there was an outage. `overseerr.whatasave.space` and `tesla.w
 | 02:22–02:23 | All nuc8-1 tasks recreated |
 
 ### Root cause
-nuc8-1 is both the **Swarm leader and the busiest node** (16 of 24 tasks; 3.8 GB RAM, ~200 MB free, ~1.4 GB available). At 02:20 the nightly apt/ESM/PackageKit jobs fired **concurrently with an XFS I/O error storm** on the vestigial GlusterFS brick. Combined, they starved dockerd long enough that its **own agent's heartbeat to its own local manager exceeded the deadline**. The manager deregistered the node, and on re-registration re-dispatched everything — killing and recreating all 15 nuc8-1 tasks.
+nuc8-1 is both the **Swarm leader and the busiest node** (16 of 24 tasks; 3.8 GB RAM, ~200 MB free, ~1.4 GB available), and it runs **permanently degraded** by a chronic XFS error load (see below). At 02:20 the nightly apt/ESM/PackageKit jobs fired on top of that and starved dockerd long enough that its **own agent's heartbeat to its own local manager exceeded the deadline**. The manager deregistered the node, and on re-registration re-dispatched everything — killing and recreating all 15 nuc8-1 tasks.
 
 The mass restart was **not** a deploy and not an OOM kill (`dmesg` shows no OOM killer activity, and the disk is healthy — SMART `PASSED`, 0 reallocated, 0 pending, 0 UDMA CRC).
+
+**What was actually different tonight was small.** `apt-daily` runs regularly without incident — Aug 30 22:48 took **7 s**, Aug 31 13:49 took **99 s** — but tonight's run took **124 s** (02:20:36 → 02:22:40). That was enough. The margin on this node is thin enough that a slightly slow package-list refresh can deregister the Swarm leader.
+
+**And this is the second occurrence, not the first.** `heartbeat to manager failed` appears twice in 7 days: **Aug 29 17:02:15** and **Sep 01 02:21:00**. The Aug 29 event went unnoticed.
 
 ### Two pieces of fallout the replica count hid
 1. **`media_overseerr` came back with no overlay IP.** `docker inspect` showed it attached to `smarthomeserver` with `IPAddress` empty, so Swarm DNS had no record and NPM logged `media_overseerr could not be resolved (3: Host not found)` once a minute. Fixed with `docker service update --force media_overseerr`; **also required `nginx -s reload` in the NPM container** — nginx had cached the failed resolution and kept 502-ing for a minute after the backend was healthy again. Now 307 (redirect to login).
 2. **`smarthomeserver_tesla-http-proxy` restarted but never rebound its published ports.** Container showed `Up 17 minutes` while `ss -lntp` showed **nothing listening on 4430/8099**, and the app had logged nothing since 02:21:11. `docker service update --force` restored both ports and traffic. Now 403 (auth-gated) instead of 502.
 
 ### Still open
-- **XFS corruption is unrepaired.** 214 errors between 02:20:07 and 02:40:13, all on block `0x3c2700`; the kernel says `Unmount and run xfs_repair`. The corrupt files are NPM access logs under the brick's `.glusterfs` dir (`proxy-host-64_access.log.{3,4}.gz`, `Structure needs cleaning`) — **leftovers from before the 2026-08-20 migration off Gluster**. gv0 is `1 x 2` replicate and **nuc8-2's brick is clean**, so the data is not at risk; the volume is simply still mounted and the self-heal daemon keeps re-reading the bad block. Nothing binds `/mnt/gluster` or `/mnt/dockerData` any more — this volume is vestigial and is now actively destabilizing the cluster. **Decide whether to decommission gv0 entirely rather than repair it.**
+- **XFS corruption is unrepaired, and it is chronic — not new tonight.** Per-day kernel error counts show this has been running continuously for at least two weeks:
+
+  | day | `Metadata CRC error` count |
+  |---|---|
+  | Aug 18 | 44,598 |
+  | Aug 19 | 51,904 |
+  | Aug 20 | 34,227 |
+  | Aug 21 – Aug 31 | **~11,500/day, every day** |
+  | Sep 01 (to 02:41) | 1,440 |
+
+  That is a steady **~8 errors/second… every second, for 14+ days**, all on the same block `0x3c2700`. The Aug 18–20 spike coincides with the GlusterFS → ext4 migration. The kernel has been saying `Unmount and run xfs_repair` this whole time.
+
+  The corrupt files are NPM access logs under the brick's `.glusterfs` dir (`proxy-host-64_access.log.{3,4}.gz`, `Structure needs cleaning`) — **leftovers from before the 2026-08-20 migration off Gluster**. gv0 is `1 x 2` replicate and **nuc8-2's brick is clean**, so no data is at risk; the volume is simply still mounted and the self-heal daemon keeps re-reading the bad block forever. Nothing binds `/mnt/gluster` or `/mnt/dockerData` any more.
+
+  **This is the top action item.** It is not an occasional spike that happened to land badly — it is a permanent tax on the node that is least able to pay it, and it is why nuc8-1 has no margin. Decommission gv0 outright rather than repairing a filesystem nothing uses.
 - **Orphan container.** `media_maintainerr.1.sr97iv…` survived the teardown and is still `Up (unhealthy)`, failing its healthcheck every 30 s with `error starting setns process: fork/exec /proc/self/fd/6: no such file or directory` while Swarm runs a healthy replacement (`rug4l0…`). It is consuming RAM on the node that can least afford it.
 - **Pre-existing, unrelated to this incident:** `tracearr.whatasave.space` 502s because proxy hosts 64/65/66 point at `media_tracearr:3000` and **no such service exists**. `teslamate.whatasave.space` and `tesla.whatasave.space` return 502 at `/` by design — both use NPM's `see-advanced:11111` sentinel and their `advanced_config` only serves the Tesla domain-verification key. Both key paths verified **200**.
 
 ### Prevention worth considering
-- Stagger or disable `apt-daily`/`esm-cache` on nuc8-1, or give the unit an `IOSchedulingClass=idle` / `CPUWeight` cap — a package-list refresh should not be able to deregister the Swarm leader.
+- **Decommission gv0 first** — it removes a constant load rather than an occasional one, and it is the single change that most widens the margin.
+- Stagger or disable `apt-daily`/`esm-cache` on nuc8-1, or give the unit an `IOSchedulingClass=idle` / `CPUWeight` cap — a package-list refresh should not be able to deregister the Swarm leader. Secondary to the above.
+- Add a Kuma check on the Swarm leader's agent session, or alert on `heartbeat to manager failed` — the Aug 29 occurrence passed unnoticed.
 - nuc8-1 carries 16 tasks to nuc8-2's 8 while nuc8-2 sits at load 0.46 with 2.2 GB available. Rebalancing would raise the margin before the next spike. (See `plans/PLAN-rebalance-services.md`.)
 - Neither failure mode (missing overlay IP, unbound published ports) changes the replica count, so **Kuma is the only thing that would have caught this** — `docker service ls` reported full health throughout.
 
