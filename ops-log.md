@@ -3,6 +3,47 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-01 (gv0 decommissioned; orphan container removed — XFS error storm ended, load 4.10 → 1.06)
+
+Follow-up to the outage entry below — user approved both actions.
+
+### Orphan container
+`media_maintainerr.1.sr97iv…` survived the 02:21 teardown and kept running `unhealthy` alongside Swarm's healthy replacement (`rug4l0…`), failing its healthcheck every 30 s with `error starting setns process: fork/exec /proc/self/fd/6: no such file or directory`. Confirmed `rug4l0…` was the desired task before removing. `docker rm -f` — service stayed `1/1`, available memory **1.40 GB → 1.85 GB**.
+
+### gv0 decommission
+
+**Pre-flight.** No containers on either node bound `/mnt/gluster` or `/mnt/dockerData`. Brick inventory on nuc8-2 (the clean replica) showed **nothing written since Aug 20** — `find -newermt 2026-08-21` returned zero files, with top-level dirs frozen at `Aug 20 16:12`, the migration date. Contents were pre-migration appdata for adguard, cross-seed, crowdsec, epic-games, maintainerr, nginx-package-manager, plex-meta-manager, recyclarr, tesla-http-proxy, teslamate, threadfin (~5.7 GB), all of which now run from local disk.
+
+**The Syncthing check that mattered.** The brick contained `.stfolder`/`.stignore` markers. A `sendreceive` Syncthing folder pointed at `/mnt/dockerData` would risk propagating deletions to peers on unmount. Two configs exist and **the obvious one is not the live one**: `/home/dlin/.local/state/syncthing/config.xml` is a stale leftover, while the running `syncthing@root.service` uses `/root/.local/state/syncthing/config.xml`. In the live config the `dockerData` folder (`9ppvg-pdxgb`, `sendreceive`) was **already `<paused>true</paused>`**, and the active folder is `servarrData` (`gym2n-vuevl`, `sendonly`) on local disk. Real peers exist (truenas, dlin-desktop-bazzite, Pixel 10a) but none touch the decommissioned mount. **Check the root config, not dlin's, when reasoning about Syncthing on nuc8-1.**
+
+**The blocker: a dead third peer.** `volume delete` failed with `Some of the peers are down`. `gluster peer status` revealed a **third peer, `truenas-ubuntu.localdomain` (192.168.0.220), `Disconnected`** — resolves but does not ping, holds no bricks in gv0, and gv0 was the only volume. Detached with `peer detach … force`, after which the delete succeeded.
+
+**Sequence run:**
+1. `systemctl stop mnt-dockerData.automount` + `umount /mnt/dockerData` — both nodes (already unmounted by the automount stop).
+2. `gluster --mode=script volume stop gv0`.
+3. `peer detach truenas-ubuntu.localdomain force`, then `volume delete gv0`.
+4. `systemctl disable --now glusterd` on both nodes; confirmed no `glusterfsd`/`glusterfs` processes remain.
+5. `umount /mnt/gluster` on both nodes.
+6. fstab lines for `/mnt/gluster` and `/mnt/dockerData` commented with a `# DECOMMISSIONED 2026-09-01 (gv0):` prefix; backups at `/etc/fstab.bak-gv0-decom-20260901`; `daemon-reload`.
+
+### Result
+**The XFS error storm stopped dead.** Last `Metadata CRC error` ever: **03:59:40**, when the brick process died. Zero errors since 04:00, verified across three window starts — against a 14-day baseline of ~11,500/day (~8/second).
+
+| metric | before | after |
+|---|---|---|
+| load average | 3.16 / 4.37 / 4.10 | **0.74 / 1.28 / 1.06** |
+| available memory | 1.40 GB | **1.84 GB** |
+| XFS errors | ~8/second | **0** |
+
+All 24 services `1/1`, no unhealthy containers, both nodes `Ready`, endpoints verified serving (overseerr 307, books 200, calibre 302, jellyfin 302, plex 401, tesla 403).
+
+### Deliberately not done
+- **The LV was left intact.** `ubuntu--vg-gluster` (100 GB, ~5.7 GB used) still holds the stale brick data, unmounted and no longer mounting at boot. Nothing was destroyed — only the Gluster volume definition. Reclaiming the 100 GB is `lvremove ubuntu-vg/gluster` on each node, which **is** irreversible; left as a separate deliberate decision once the data is confirmed unwanted.
+- `xfs_repair` was never run and is now moot — the filesystem is unmounted and unused.
+- The gluster packages remain installed (`glusterd` disabled, not purged).
+
+### Status: Resolved. gv0 gone; 100 GB LV reclamation still available.
+
 ## 2026-09-01 (outage: apt-daily starved the Swarm manager → every nuc8-1 task killed and recreated)
 
 ### Symptom
@@ -47,8 +88,8 @@ The mass restart was **not** a deploy and not an OOM kill (`dmesg` shows no OOM 
 
   The corrupt files are NPM access logs under the brick's `.glusterfs` dir (`proxy-host-64_access.log.{3,4}.gz`, `Structure needs cleaning`) — **leftovers from before the 2026-08-20 migration off Gluster**. gv0 is `1 x 2` replicate and **nuc8-2's brick is clean**, so no data is at risk; the volume is simply still mounted and the self-heal daemon keeps re-reading the bad block forever. Nothing binds `/mnt/gluster` or `/mnt/dockerData` any more.
 
-  **This is the top action item.** It is not an occasional spike that happened to land badly — it is a permanent tax on the node that is least able to pay it, and it is why nuc8-1 has no margin. Decommission gv0 outright rather than repairing a filesystem nothing uses.
-- **Orphan container.** `media_maintainerr.1.sr97iv…` survived the teardown and is still `Up (unhealthy)`, failing its healthcheck every 30 s with `error starting setns process: fork/exec /proc/self/fd/6: no such file or directory` while Swarm runs a healthy replacement (`rug4l0…`). It is consuming RAM on the node that can least afford it.
+  **This is the top action item.** It is not an occasional spike that happened to land badly — it is a permanent tax on the node that is least able to pay it, and it is why nuc8-1 has no margin. Decommission gv0 outright rather than repairing a filesystem nothing uses. **→ Done 2026-09-01; see the entry above.**
+- **Orphan container.** *(Removed 2026-09-01 — see entry above.)* `media_maintainerr.1.sr97iv…` survived the teardown and was still `Up (unhealthy)`, failing its healthcheck every 30 s with `error starting setns process: fork/exec /proc/self/fd/6: no such file or directory` while Swarm runs a healthy replacement (`rug4l0…`). It is consuming RAM on the node that can least afford it.
 - **Pre-existing, unrelated to this incident:** `tracearr.whatasave.space` 502s because proxy hosts 64/65/66 point at `media_tracearr:3000` and **no such service exists**. `teslamate.whatasave.space` and `tesla.whatasave.space` return 502 at `/` by design — both use NPM's `see-advanced:11111` sentinel and their `advanced_config` only serves the Tesla domain-verification key. Both key paths verified **200**.
 
 ### Prevention worth considering
