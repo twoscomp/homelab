@@ -3,6 +3,20 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-25 (root cause: the recurring Swarm restarts are memory stalls on nuc8-1, the sole manager)
+
+Follow-up to the entry below.
+
+**Sequence (identical in every event):** nuc8-2's memberlist pings to `192.168.0.101:7946` time out 7–10 s before its heartbeat fails; nuc8-1 is marked failed in the gossip cluster; on Sep 9 nuc8-1 itself couldn't reach `192.168.0.1:53` or `8.8.8.8:53`. nuc8-1 vanishes for ~10–20 s.
+
+**Ruled out:** NIC (`e1000e`, kernel 6.8.0-124) — no hang/reset/link-down lines in any window; OOM kills — none; journald restarts — those are the 06:1x–06:3x unattended-upgrade restarts, unrelated.
+
+**Cause:** `systemd-journald: Under memory pressure, flushing caches` (fired by kernel PSI) occurs on nuc8-1 **every day, 2–39 times a day**, and **every outage coincides with a burst**: Aug 29 17:03–17:15, Sep 01 02:21–02:22, Sep 05 14:38 ×3, Sep 09 08:02–08:03 ×7, Sep 15 20:22 ×3, Sep 19 20:23 ×6. At the time of checking: `/proc/pressure/memory` **full avg10 = 5.49%** (all tasks stalled on memory ~5% of the time; ~146,000 s full-stall since boot), 213 MB free, 1.48 GB swap used, 3.8 GB RAM total. A severe stall freezes the node; because nuc8-1 is the **only manager**, the dispatcher misses heartbeats from both nodes, deregisters them, and tasks are killed and recreated on reconnect. The repeated 20:xx hour was coincidence, and the Sep 01 gluster I/O storm was an aggravating factor, not the cause.
+
+**No sysstat history** — `/etc/default/sysstat` has `ENABLED="false"`, so the cron job records nothing.
+
+**Options:** (1) `docker swarm update --dispatcher-heartbeat 20s` — tolerance ~15 s → ~60 s (≈3 missed periods), stops the mass restarts; symptom mitigation. (2) Enable sysstat. (3) Real fix: RAM — NUC8 takes DDR4 SO-DIMM, 32 GB official max; rebalancing to nuc8-2 helps less (also 3.8 GB).
+
 ## 2026-09-25 (finding: Swarm heartbeat loss is recurring — 3 more unnoticed mass restarts since Sep 1)
 
 The 2026-09-01 entry treated the leader's heartbeat timeout as a resource-starvation event, fixed by removing the gluster XFS storm. **It kept happening.** `journalctl -u docker` since 2026-08-20:
