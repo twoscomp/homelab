@@ -3,6 +3,10 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-24 (HA migration Phase 2: HAOS VM built on TrueNAS, stopped until cutover)
+
+VM 5 `haos`: HAOS 18.3 (SHA-256 verified) imported onto zvol `newton/haos/haos-os` (64 GiB) with `vm.device.convert`; UEFI, 2 vCPU, 4 GiB, UTC clock, autostart **off**; VirtIO NIC on `br0` with MAC pinned to `00:a0:98:47:ef:de` (TrueNAS left it `None`); DHCP → **192.168.0.67**; SPICE display on 127.0.0.1 with a password in `/mnt/newton/appdata/ha-migration/.vm-display-password`. Test-booted (supervisor healthy, first-boot Core setup completed, not onboarded), shut down, then SkyConnect (`0x10c4:0xea60`) attached while stopped. **Starting VM 5 before cutover would take the SkyConnect from the live HA.** Finding: this HAOS serves Core on **port 80** (`:8123` 307-redirects to it) → NPM host 1 must target `:80`. Live HA unaffected throughout (NPM 200).
+
 ## 2026-09-24 (HA migration Phase 1: Postgres → SQLite conversion rehearsed — PASS 28/28)
 
 Throwaway TrueNAS app `ha-migration-rehearsal` (scratch `postgres:17.11` + `pg_restore` + a job in `homeassistant/home-assistant:2026.9.2`), fed only the Phase 0 dump — live HA untouched. HA itself created the empty SQLite schema (v53); all 13 recorder tables copied with primary keys in one repeatable-read snapshot; every table matched on row count, key range and a per-column fingerprint; 13 months of long-term statistics preserved; SQLite integrity ok; HA booted on the result with no recorder errors and no schema migration. Total ~12 min; cutover conversion estimated at ~8 min. Tooling and report in `plans/ha-migration/`. App `STOPPED`, pending deletion.

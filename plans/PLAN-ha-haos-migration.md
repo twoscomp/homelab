@@ -37,7 +37,7 @@ A stopped VM `openclaw` has 8 GB assigned; don't run both on a tight day.
 
 | Reference | Value | Change? |
 |---|---|---|
-| NPM proxy host **1** (`ha.swarm.localdomain`, `ha.whatasave.space`, `homeassistant.whatasave.space`) | `http://192.168.0.196:20810`, websockets on | **Yes** → `http://<VM IP>:8123` |
+| NPM proxy host **1** (`ha.swarm.localdomain`, `ha.whatasave.space`, `homeassistant.whatasave.space`) | `http://192.168.0.196:20810`, websockets on | **Yes** → `http://192.168.0.67:80` |
 | HA `internal_url` / `external_url` | `http://ha.swarm.localdomain` / `http://homeassistant.whatasave.space` | No (both go through NPM) |
 | MQTT integration | broker `192.168.0.101:1883` (teslamate mosquitto) | No |
 | UniFi / UniFi Protect | `192.168.0.1` | No |
@@ -188,6 +188,28 @@ the real HAOS boot).
 4. IP comes from DHCP; note it on first boot.
 5. Don't onboard yet. Onboarding is where the backup gets restored, at cutover.
 
+**Done 2026-09-24** (all via `midclt`, no sudo):
+
+| | |
+|---|---|
+| Image | HAOS **18.3** `haos_ova-18.3.qcow2.xz`, SHA-256 verified against the GitHub release digest; 32 GiB virtual |
+| Disk | zvol **`newton/haos/haos-os`**, 64 GiB, 16K blocks, non-sparse; imported with `vm.device.convert` (878 MiB written) |
+| VM | **id 5, `haos`** — UEFI (`OVMF_CODE.fd`), 2 vCPU (HOST-MODEL), 4096 MiB, clock **UTC**, **autostart off** |
+| NIC | VirtIO on `br0`, MAC pinned **`00:a0:98:47:ef:de`** (it was `None` → would risk a new DHCP lease per boot) |
+| IP | DHCP gave **192.168.0.67** |
+| Display | SPICE web, bound to 127.0.0.1 (TrueNAS UI only); password required by TrueNAS, stored in `/mnt/newton/appdata/ha-migration/.vm-display-password` (0600) |
+| USB | SkyConnect by vendor/product **`0x10c4:0xea60`** (survives a port change), `nec-xhci` — added **after** the test boot, with the VM stopped |
+
+Test boot: booted the imported disk, supervisor Connected / Supported / Healthy, completed first-boot
+Core setup (onboarding pending, **not** onboarded), then shut down cleanly.
+
+**Finding — Core serves on port 80 on this HAOS.** `:8123` returns a 307 to `http://192.168.0.67/…`.
+NPM must therefore target **`http://192.168.0.67:80`** — pointing it at `:8123` would redirect
+external clients to the internal IP.
+
+⚠️ **Do not start VM 5 before cutover.** With the USB device attached, starting it takes the
+SkyConnect away from the running app (Zigbee goes down).
+
 ### Phase 3 — Cutover (downtime window: ~8 min conversion + ~20–30 min restore/verify)
 
 1. Final HA backup (Phase 0 step 1) and final `pg_dump` (step 2), both while HA runs.
@@ -207,7 +229,7 @@ the real HAOS boot).
          - 192.168.0.26    # nuc8-2, in case NPM moves
      ```
 6. Restart Core. Check the log: recorder on SQLite, no migration or errors.
-7. Repoint **NPM proxy host 1** to `http://<VM IP>:8123` (websockets stay on).
+7. Repoint **NPM proxy host 1** to **`http://192.168.0.67:80`** (not `:8123` — see Phase 2 finding; websockets stay on).
 8. Verify:
    - **ZHA:** all Zigbee devices online, no re-pairing;
    - **History:** graphs go back to the pre-migration earliest date; energy dashboard
@@ -252,6 +274,6 @@ install on any Postgres.
       Leftovers: delete throwaway app `ha-migration-pgdump` (STOPPED). Note: HA **decrypts on download** —
       the copy in Google Drive is plaintext.
 - [x] Phase 1 — Rehearse conversion — **PASS 28/28, 2026-09-24**. Leftovers: delete app `ha-migration-rehearsal` (STOPPED); scratch `rehearsal/pgdata` (~3.5 GB, owned by uid 999) needs a root-capable cleanup
-- [ ] Phase 2 — Build VM
+- [x] Phase 2 — Build VM — done 2026-09-24: VM 5 `haos`, 192.168.0.67, stopped, SkyConnect attached, autostart off
 - [ ] Phase 3 — Cutover
 - [ ] Phase 4 — After cutover
