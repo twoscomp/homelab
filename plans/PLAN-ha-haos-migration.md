@@ -224,7 +224,11 @@ install on any Postgres.
 
 ## Status
 
-- [ ] Phase 0 — Measure and back up — **dump + measurements done 2026-09-24**; HA UI backup + encryption key pending (user); throwaway app `ha-migration-pgdump` (STOPPED) to delete
+- [x] Phase 0 — Measure and back up — done 2026-09-24:
+      dump + measurements; HA **automatic backups enabled** (`Automatic_backup_2026.9.2_2026-09-24_22.51…tar`,
+      90.6 MB, encrypted, in `/mnt/newton/appdata/homeassistant/backups/`; emergency kit saved by user).
+      Leftovers: delete throwaway app `ha-migration-pgdump` (STOPPED). Note: HA **decrypts on download** —
+      the copy in Google Drive is plaintext.
 - [ ] Phase 1 — Rehearse conversion
 - [ ] Phase 2 — Build VM
 - [ ] Phase 3 — Cutover
