@@ -47,6 +47,23 @@ A stopped VM `openclaw` has 8 GB assigned; don't run both on a tight day.
 | Kuma | check for any monitor on `192.168.0.196:20810` directly | Maybe |
 | Repo / memory | `AGENTS.md`, memory `reference_ha_config_path` → `/mnt/newton/appdata/homeassistant` | **Yes**, after cutover |
 
+### Recorder database (measured 2026-09-24, Phase 0)
+
+| | |
+|---|---|
+| Engine / size | PostgreSQL 17.11, **3.2 GB**, recorder **schema version 53** |
+| `states` | 5,669,448 rows, 2.25 GB — 2026-08-25 → now (the 30-day window) |
+| `state_attributes` | 552,650 rows, 376 MB |
+| `statistics` | 1,486,409 rows, 258 MB — **2025-08-31 → now: 13 months of long-term history** |
+| `statistics_short_term` | 1,215,849 rows, 284 MB |
+| `statistics_meta` / `states_meta` | 192 / 1,283 |
+| `events` / `event_data` | 157,756 / 3,664 |
+| Tables | 13 (all present in the dump archive) |
+
+Dump: `/mnt/newton/appdata/ha-migration/ha-pg-20260924.dump` — 286 MB, `pg_dump -Fc -Z6`,
+SHA-256 `a661e182…c8e64c` (verified). Measure + dump took ~50 s with HA running.
+The `.sha256` file records the in-container path `/out/…`; compare hashes by hand.
+
 ### Two findings that shape the plan
 
 1. **The app rewrites `configuration.yaml` on every start.** Its `init` container
@@ -86,7 +103,8 @@ anyway.
       Claude can't edit its own permissions) — creates/updates/starts/stops only, deletes excluded.
 - [x] **VM IP** — **DHCP-assigned**, no reservation (user). NPM host 1 points at that IP, so if the
       lease ever changes, HA goes unreachable through NPM until host 1 is updated — Kuma will flag it.
-- [x] **nuc8-2's LAN IP** — `192.168.0.26` per user (confirm in Phase 0); needed for `trusted_proxies`. nuc8-1 is `192.168.0.101`.
+- [x] **Proxy source IPs** — confirmed with `ip route get 192.168.0.196`: nuc8-1 → `192.168.0.101`,
+      nuc8-2 → `192.168.0.26` (nuc8-2's `.254` is its keepalived VIP, `.119` its unused Wi-Fi).
 - [ ] **Target cutover date** — before November; ideally mid-October to leave room for fallback B.
 
 ## Phases
@@ -106,7 +124,7 @@ anyway.
 3. Measure, from the same Postgres: DB size, row count per table, earliest `statistics`
    row, and `SELECT MAX(schema_version) FROM schema_changes`.
 4. ~~Read `.storage/http`~~ — root-only and not needed; Phase 3 sets the `http:` block explicitly.
-5. Confirm nuc8-2's LAN IP is `192.168.0.26` (`ssh nuc8-2 hostname -I`).
+5. ~~Confirm nuc8-2's LAN IP~~ — done: `192.168.0.26`.
 6. **Freeze the HA version at 2026.9.2** until cutover is done — don't update the app.
    Same version on both sides = identical recorder schema.
 
@@ -206,7 +224,7 @@ install on any Postgres.
 
 ## Status
 
-- [ ] Phase 0 — Measure and back up
+- [ ] Phase 0 — Measure and back up — **dump + measurements done 2026-09-24**; HA UI backup + encryption key pending (user); throwaway app `ha-migration-pgdump` (STOPPED) to delete
 - [ ] Phase 1 — Rehearse conversion
 - [ ] Phase 2 — Build VM
 - [ ] Phase 3 — Cutover
