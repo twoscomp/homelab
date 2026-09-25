@@ -3,6 +3,16 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-25 (Plex DLNA fixed: UPnP -22105 was the kernel's 20-group multicast limit)
+
+**Symptom:** since the 2026-09-24 reboot, Plex's DLNA server died on start with `Unable to start UPNP server: -22105`, then `exited 3 times in less than 60 seconds; giving up`. The DLNA profiles loaded fine each time (not the cause).
+
+**Root cause:** Neptune (Plex's UPnP library) reports socket errors as −22000 − errno, so −22105 = errno 105, **`ENOBUFS`**. Plex runs with **host networking** and its DLNA server joins the SSDP multicast group 239.255.255.250 on **every IPv4 interface from a single socket**. The NAS has **22** such interfaces — `lo`, `br0`, `incusbr0`, `docker0` and **18 `br-*` bridges, one per TrueNAS app** — while `net.ipv4.igmp_max_memberships` (joins per socket) defaults to **20**. The 21st join fails. It worked until the number of app bridges pushed the total past the limit; each new TrueNAS app adds one.
+
+**Fix:** TrueNAS sysctl tunable id 1, `net.ipv4.igmp_max_memberships = 256` (persistent, System → Advanced → Sysctl; applied live), then `app.stop` / `app.start plex` — deliberately not `app.update`, which rewrites config.
+
+**Verified:** DLNA started with no UPnP error, 24 profiles loaded (only the expected `IgnoreTranscodeByteRangeRequests` warning); UDP 1900 and TCP 32469 bound; `DeviceDescription.xml` on :32469 → 200; Plex now joined to the SSDP group on **21** interfaces — exactly one over the old limit. Plex RUNNING on its real config (`machineIdentifier` 75d0a858), all six mounts unchanged, NPM 401.
+
 ## 2026-09-25 (GlusterFS leftovers removed: 100 GB LV reclaimed on each NUC)
 
 Follow-up to the 2026-09-01 gv0 decommission, at the user's request.
