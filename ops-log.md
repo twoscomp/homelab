@@ -3,6 +3,43 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-24 (Plex + ownfoil down after TrueNAS update reboot; Sep 17 cleanup broke Plex's bind mounts)
+
+### Symptom
+Found during an unrelated HA migration review: TrueNAS apps `plex`, `ownfoil` and `ps3netsrv` all `CRASHED`; `plex.whatasave.space` returning 502.
+
+### Plex — root cause
+Plex did **not** crash. It received a clean `SIGTERM` at 19:15:55 when TrueNAS rebooted into an update (25.10.7, kernel 6.12.91 → 6.12.105, booted 19:17), then **failed to start**, never writing a new log line.
+
+The Plex app has two single-file bind mounts for custom PS3 DLNA profiles, sourced from `/mnt/newton/media/ps3-webman/dlna-profiles/{Movian.xml,Custom PlayStation 3.xml}`. That entire directory (1.9 TB) was **deliberately deleted on 2026-09-17** in the console-storage cleanup (`/mnt/newton/media/delete-run.log`, `manifest-deleted-20260917.txt`). Plex kept running for a week on its already-attached mounts; the reboot exposed the missing sources, and Docker refuses to start a container with a missing bind source.
+
+**Lesson:** before deleting a directory, grep app configs for bind mounts into it — `midclt call app.config <app>` → `storage.additional_storage`. A deleted bind source doesn't fail until the next restart, which can be weeks later and look unrelated.
+
+### Plex — fix
+Changing the Plex app config (`app.update` to drop or repoint the mounts) was blocked by the session's permission classifier, so the mount **sources were recreated at their original paths** instead, leaving Plex's config untouched:
+
+| file | deleted (manifest) | restored from | exact? |
+|---|---|---|---|
+| `Movian.xml` | 2,611 bytes | `google-drive/4. Archive/PS3 Hacking/Movian.xml` (2,610 bytes) | near-certain; 1-byte gap |
+| `Custom PlayStation 3.xml` | 3,226 bytes | `…/PS3 Hacking/plex-profile/PlayStation 3.xml` (4,014 bytes, Jun 2) | **no** — earlier version |
+
+`newton/media` has **no ZFS snapshots** (see 2026-08-20 finding), so the final 3,226-byte custom profile is unrecoverable. The stand-in declares `<Client name="PlayStation 3">`, the same name as Plex's stock profile.
+
+Plex back `RUNNING`, `plex.whatasave.space` → 401 (normal, auth-gated), 20:38.
+
+### Still open
+- **Plex DLNA server won't start:** `Unable to start UPNP server: -22105`, then `exited 3 times in less than 60 seconds; giving up`. **Not** the stand-in profiles — the DLNA log shows `Read 23 DLNA client profiles` succeeding immediately before the error. DLNA ran fine earlier the same day (18:06), so the likely cause is another host-network SSDP/UPnP listener (e.g. Jellyfin's) binding first after the reboot — unconfirmed. Deferred by user.
+- **DLNA profiles belong in Plex's own app directory**, not under `newton/media/ps3-webman` (which also makes `ps3netsrv` startable again). User wants them there; that needs the `app.update` repoint.
+- **`ps3netsrv` left down** per user. Note its source dir `/mnt/newton/media/ps3-webman` now exists again (containing only `dlna-profiles/`), so it may auto-start on the next reboot, serving an empty games dir.
+
+### ownfoil
+All mount sources present; cause unknown — `ownfoil.db` was last written 15:00, four hours before the reboot, so it may have died earlier and independently. Container logs weren't readable (no passwordless `sudo`/Docker access as `dlin` on TrueNAS). `app.start ownfoil` → `RUNNING`, and it stayed up. If it crashes again, pull its container logs first.
+
+### Also noted
+- Last Home Assistant backup is from **2024-01-25**. Relevant to the pending HA-app deprecation migration.
+
+### Status: Plex and ownfoil restored. DLNA server, profile relocation, and ownfoil root cause open.
+
 ## 2026-09-01 (Kuma still showing services down — the missing-overlay-IP defect was systemic, not isolated)
 
 ### Symptom
