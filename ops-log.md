@@ -3,6 +3,10 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-24 (HA migration Phase 1: Postgres → SQLite conversion rehearsed — PASS 35/35)
+
+Throwaway TrueNAS app `ha-migration-rehearsal` (scratch `postgres:17.11` + `pg_restore` + a job in `homeassistant/home-assistant:2026.9.2`), fed only the Phase 0 dump — live HA untouched. HA itself created the empty SQLite schema (v53); all 13 recorder tables copied with primary keys in one repeatable-read snapshot; every table matched on row count, key range and a per-column fingerprint; 13 months of long-term statistics preserved; SQLite integrity ok; HA booted on the result with no recorder errors and no schema migration. Total ~12 min; cutover conversion estimated at ~8 min. Tooling and report in `plans/ha-migration/`. App `STOPPED`, pending deletion.
+
 ## 2026-09-24 (HA migration Phase 0: recorder database measured and dumped)
 
 Per `plans/PLAN-ha-haos-migration.md`. Created `/mnt/newton/appdata/ha-migration/` and a throwaway TrueNAS custom app `ha-migration-pgdump` (`postgres:17.11-bookworm` on `ix-internal-home-assistant-home-assistant-net`, credentials read at runtime from HA's `configuration.yaml`, mounted read-only). HA stayed up. Dump `ha-pg-20260924.dump` (286 MB, SHA-256 verified) plus measurements: 3.2 GB database, schema 53, **13 months of long-term statistics** (from 2025-08-31). App is `STOPPED` and pending deletion (deletes are not pre-approved for Claude). Done without sudo — all TrueNAS changes via `midclt`, enabled by a scoped `autoMode.allow` entry the user added to `.claude/settings.local.json`.

@@ -1,0 +1,46 @@
+services:
+  pgdump:
+    image: postgres:17.11-bookworm
+    restart: "no"
+    networks: [ha]
+    volumes:
+      - /mnt/newton/appdata/homeassistant/configuration.yaml:/ha/configuration.yaml:ro
+      - /mnt/newton/appdata/ha-migration:/out
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        D=20260924
+        exec > >(tee /out/ha-pgdump-run-$$D.log) 2>&1
+        echo "start $$(date -Is)"
+        URL=$$(grep -E '^[[:space:]]+db_url:' /ha/configuration.yaml | head -1 | sed -E 's/^[[:space:]]*db_url:[[:space:]]*"?//; s/"?[[:space:]]*$$//')
+        [ -n "$$URL" ] || { echo "no db_url found"; exit 1; }
+        psql "$$URL" -X -v ON_ERROR_STOP=1 -At > /out/ha-pg-measure-$$D.txt <<'SQL'
+        \echo === server
+        SELECT version();
+        \echo === db size
+        SELECT pg_size_pretty(pg_database_size(current_database()));
+        \echo === schema version
+        SELECT max(schema_version) FROM schema_changes;
+        \echo === table sizes
+        SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) FROM pg_statio_user_tables ORDER BY pg_total_relation_size(relid) DESC;
+        \echo === exact row counts
+        SELECT format('SELECT %L AS t, count(*) FROM %I', relname, relname) FROM pg_stat_user_tables ORDER BY relname \gexec
+        \echo === statistics range
+        SELECT to_timestamp(min(start_ts)), to_timestamp(max(start_ts)) FROM statistics;
+        \echo === states range
+        SELECT to_timestamp(min(last_updated_ts)), to_timestamp(max(last_updated_ts)) FROM states;
+        SQL
+        echo "measured $$(date -Is)"
+        pg_dump "$$URL" -Fc -Z 6 -f /out/ha-pg-$$D.dump.partial
+        mv /out/ha-pg-$$D.dump.partial /out/ha-pg-$$D.dump
+        echo "dumped $$(date -Is)"
+        pg_restore -l /out/ha-pg-$$D.dump | grep -c "TABLE DATA" | sed 's/^/table-data entries in archive: /'
+        sha256sum /out/ha-pg-$$D.dump > /out/ha-pg-$$D.dump.sha256
+        ls -la /out
+        chown -R 1000:1000 /out
+        echo "DONE $$(date -Is)"
+networks:
+  ha:
+    external: true
+    name: ix-internal-home-assistant-home-assistant-net

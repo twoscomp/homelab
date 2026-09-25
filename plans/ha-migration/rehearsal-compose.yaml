@@ -1,0 +1,50 @@
+services:
+  pg:
+    image: postgres:17.11-bookworm
+    restart: "no"
+    environment:
+      POSTGRES_PASSWORD: rehearsal
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off",
+              "-c", "maintenance_work_mem=512MB", "-c", "max_wal_size=4GB"]
+    volumes:
+      - /mnt/newton/appdata/ha-migration/rehearsal/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+  restore:
+    image: postgres:17.11-bookworm
+    restart: "no"
+    depends_on:
+      pg:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: rehearsal
+    volumes:
+      - /mnt/newton/appdata/ha-migration:/dump:ro
+      - /mnt/newton/appdata/ha-migration/rehearsal/job:/work
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        exec > >(tee /work/restore.log) 2>&1
+        echo "restore start $$(date -Is)"
+        createdb -h pg -U postgres ha
+        pg_restore -h pg -U postgres -d ha --no-owner --no-privileges -j 3 /dump/ha-pg-20260924.dump
+        psql -h pg -U postgres -d ha -Atc "select 'states rows: ' || count(*) from states"
+        echo "restore done $$(date -Is)"
+  job:
+    image: homeassistant/home-assistant:2026.9.2
+    restart: "no"
+    depends_on:
+      restore:
+        condition: service_completed_successfully
+    environment:
+      TZ: America/Chicago
+      WORK: /work
+      PG_URL: postgresql://postgres:rehearsal@pg:5432/ha
+    volumes:
+      - /mnt/newton/appdata/ha-migration/rehearsal/job:/work
+    entrypoint: ["python3", "-u", "/work/pg-to-sqlite.py"]

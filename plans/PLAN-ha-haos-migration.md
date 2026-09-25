@@ -154,6 +154,28 @@ app is not touched.
 
 If validation can't be made to pass → switch to **fallback B** before going further.
 
+**Result 2026-09-24: PASS, 35/35 checks** — tooling in `plans/ha-migration/`
+(`pg-to-sqlite.py`, `rehearsal-compose.yaml`, `pgdump-compose.yaml`, `rehearsal-report-20260924.json`).
+
+| step | time |
+|---|---|
+| `pg_restore` of the 286 MB dump into scratch Postgres (`-j 3`) | 60 s |
+| boot 1: HA 2026.9.2 creates the empty SQLite schema | 122 s |
+| copy all 13 tables (states: 5,669,474 rows in 177 s) | 268 s |
+| validate (counts, key ranges, every column's fingerprint, id sets, time ranges) | 32 s |
+| SQLite `integrity_check` + `foreign_key_check` | 25 s |
+| boot 2 on the converted file (initialized in 40 s; +45 s settle) | 187 s |
+
+SQLite result: **1.49 GB** (Postgres was 3.2 GB). Statistics range preserved exactly:
+2025-08-31 10:00 → 2026-09-24 20:00. Boot 2: no recorder errors, no schema migration, new
+recorder run written, missed hour of statistics compiled (+126 rows). Expected warnings only:
+"could not validate … shutdown cleanly" and "Ended unfinished session" (the source run was open
+at dump time — will recur at cutover, harmless).
+
+**Cutover conversion estimate: ~8 min** (dump 30 s + restore 60 s + copy ~4.5 min + validate
+and integrity ~1 min; boot 1's empty schema can be created ahead of time, boot 2 is replaced by
+the real HAOS boot).
+
 ### Phase 2 — Build the VM (no downtime)
 
 1. Download the HAOS **KVM (`.qcow2`)** image; convert it onto a new zvol
@@ -166,7 +188,7 @@ If validation can't be made to pass → switch to **fallback B** before going fu
 4. IP comes from DHCP; note it on first boot.
 5. Don't onboard yet. Onboarding is where the backup gets restored, at cutover.
 
-### Phase 3 — Cutover (downtime window: conversion time + ~30–45 min)
+### Phase 3 — Cutover (downtime window: ~8 min conversion + ~20–30 min restore/verify)
 
 1. Final HA backup (Phase 0 step 1) and final `pg_dump` (step 2), both while HA runs.
 2. Convert the final dump with the Phase 1 script; run the Phase 1 validation checks.
@@ -229,7 +251,7 @@ install on any Postgres.
       90.6 MB, encrypted, in `/mnt/newton/appdata/homeassistant/backups/`; emergency kit saved by user).
       Leftovers: delete throwaway app `ha-migration-pgdump` (STOPPED). Note: HA **decrypts on download** —
       the copy in Google Drive is plaintext.
-- [ ] Phase 1 — Rehearse conversion
+- [x] Phase 1 — Rehearse conversion — **PASS 35/35, 2026-09-24**. Leftovers: delete app `ha-migration-rehearsal` (STOPPED); scratch `rehearsal/pgdata` (~3.5 GB, owned by uid 999) needs a root-capable cleanup
 - [ ] Phase 2 — Build VM
 - [ ] Phase 3 — Cutover
 - [ ] Phase 4 — After cutover
