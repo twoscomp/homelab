@@ -3,6 +3,28 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-25 (finding: Swarm heartbeat loss is recurring — 3 more unnoticed mass restarts since Sep 1)
+
+The 2026-09-01 entry treated the leader's heartbeat timeout as a resource-starvation event, fixed by removing the gluster XFS storm. **It kept happening.** `journalctl -u docker` since 2026-08-20:
+
+| node | `heartbeat to manager failed` / `node not registered` / `session failed`, by hour |
+|---|---|
+| nuc8-1 | Aug 20 05, Aug 22 00, Aug 29 17, Sep 01 02, **Sep 05 14, Sep 09 08, Sep 15 20, Sep 19 20** |
+| nuc8-2 | Aug 20 00/05, Aug 21 15, Aug 22 00, Aug 29 17, **Sep 09 08 (24 events), Sep 15 20, Sep 19 20** |
+
+Task teardowns (`failed to deactivate service binding`) since Sep 2 — each a Sep 1–style kill-and-recreate:
+
+| when | teardowns |
+|---|---|
+| Sep 09 08:xx | **16 on nuc8-1 + 8 on nuc8-2** (whole cluster) |
+| Sep 15 20:xx | 15 on nuc8-1 (+1 at 09:xx) |
+| Sep 19 20:xx | 8 on nuc8-2 |
+| Sep 05 14:xx | 1 on nuc8-1 |
+
+None were noticed. Current state is clean: **no container on either node is missing an overlay IP** (2026-09-25 scan).
+
+**Implications:** events hitting both nodes in the same hour argue against per-node starvation — more consistent with the single manager (nuc8-1) stalling, or the network; the repeated 20:xx hour hints at something scheduled. **Open:** (1) root cause — correlate timestamps with cron, container schedules, load and network logs; (2) alerting — host-level systemd timer on each NUC (not a Swarm service, which would fail with the thing it watches) scanning the docker journal and running the missing-overlay-IP check, pushing to a Kuma push monitor → Discord.
+
 ## 2026-09-25 (Plex DLNA fixed: UPnP -22105 was the kernel's 20-group multicast limit)
 
 **Symptom:** since the 2026-09-24 reboot, Plex's DLNA server died on start with `Unable to start UPNP server: -22105`, then `exited 3 times in less than 60 seconds; giving up`. The DLNA profiles loaded fine each time (not the cause).
