@@ -25,7 +25,7 @@ Follow-up to the 2026-09-01 gv0 decommission, at the user's request.
 
 **Verification of the reconstructed PS3 profile:** DLNA now loads **24** profiles with the single `IgnoreTranscodeByteRangeRequests` warning and no `AudioCodec` warnings — the same fingerprint as boots with the original file.
 
-**Still open:** DLNA server still fails `Unable to start UPNP server: -22105` (pre-existing, not the profiles). Orphans from the blank interlude: `/mnt/.ix-apps/app_mounts/plex/{config,data}` and docker volumes `ix-plex_plex-logs`, `ix-plex_plex-transcodes`. `/mnt/newton/media/ps3-webman` is no longer used by Plex; `ps3netsrv` is RUNNING again on it (user had wanted it down).
+**Still open:** DLNA server still fails `Unable to start UPNP server: -22105` (pre-existing, not the profiles). Orphans from the blank interlude — **cleaned up 2026-09-25 by the user** (root needed; not possible via `midclt`, which only offers `app.ix_volume.query`/`exists`): these were **ZFS datasets**, not folders — `newton/ix-apps/app_mounts/plex` and its `config` (125 MB of codecs/cache) and `data` children, hidden from `pool.dataset.query` — so `rm` only emptied them ("Device or resource busy") and `zfs destroy` per dataset, without `-r`, removed them; docker volumes `ix-plex_plex-logs`/`ix-plex_plex-transcodes` removed with `docker volume rm` (not independently verifiable as `dlin`). Verified: `app.ix_volume.query` for plex is empty, no plex mounts under `app_mounts`, HA's `postgres_data` untouched, Plex 401 / HA 200. `/mnt/newton/media/ps3-webman` is no longer used by Plex; `ps3netsrv` is RUNNING again on it (user had wanted it down).
 
 ## 2026-09-24 (HA migration Phase 2: HAOS VM built on TrueNAS, stopped until cutover)
 
