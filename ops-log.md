@@ -3,6 +3,16 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-25 (Plex DLNA profiles moved into Plex's app dir — and a 5-minute blank-Plex incident)
+
+**Change:** Plex's two DLNA-profile bind mounts repointed from `/mnt/newton/media/ps3-webman/dlna-profiles/` (a folder deleted in the Sep 17 cleanup and only recreated as a stopgap) to **`/mnt/newton/appdata/plex/dlna-profiles/`**, which is covered by the `newton/appdata` snapshot task (`newton/media` has none). Pre-change config saved to `/mnt/newton/appdata/plex/app-config-before-dlna-repoint-20260925.json` (0600). User approved interrupting their own active stream.
+
+**Incident (~00:50–00:56):** the first `midclt call app.update plex` sent only `values.storage.additional_storage`. TrueNAS **replaced the entire `storage` section**, so `config`, `data`, `logs` and `transcode` fell back to fresh empty `ix_volume`s — Plex came up RUNNING and answered 401 through NPM, but as a **blank, unclaimed server** with no libraries. Caught by checking the container's `volume_mounts` after the DLNA log failed to update. Fixed by re-sending the **complete** `storage` section from the saved config; a full `app.config` diff against the backup now shows only `ix_context.*` and the two intended paths. Real server confirmed (`machineIdentifier` `75d0a858`, library DB loaded). Nothing lost — host paths were only unmounted. Lesson saved to memory: send whole sections, then diff config and mounts.
+
+**Verification of the reconstructed PS3 profile:** DLNA now loads **24** profiles with the single `IgnoreTranscodeByteRangeRequests` warning and no `AudioCodec` warnings — the same fingerprint as boots with the original file.
+
+**Still open:** DLNA server still fails `Unable to start UPNP server: -22105` (pre-existing, not the profiles). Orphans from the blank interlude: `/mnt/.ix-apps/app_mounts/plex/{config,data}` and docker volumes `ix-plex_plex-logs`, `ix-plex_plex-transcodes`. `/mnt/newton/media/ps3-webman` is no longer used by Plex; `ps3netsrv` is RUNNING again on it (user had wanted it down).
+
 ## 2026-09-24 (HA migration Phase 2: HAOS VM built on TrueNAS, stopped until cutover)
 
 VM 5 `haos`: HAOS 18.3 (SHA-256 verified) imported onto zvol `newton/haos/haos-os` (64 GiB) with `vm.device.convert`; UEFI, 2 vCPU, 4 GiB, UTC clock, autostart **off**; VirtIO NIC on `br0` with MAC pinned to `00:a0:98:47:ef:de` (TrueNAS left it `None`); DHCP → **192.168.0.67**; SPICE display on 127.0.0.1 with a password in `/mnt/newton/appdata/ha-migration/.vm-display-password`. Test-booted (supervisor healthy, first-boot Core setup completed, not onboarded), shut down, then SkyConnect (`0x10c4:0xea60`) attached while stopped. **Starting VM 5 before cutover would take the SkyConnect from the live HA.** Finding: this HAOS serves Core on **port 80** (`:8123` 307-redirects to it) → NPM host 1 must target `:80`. Live HA unaffected throughout (NPM 200).
