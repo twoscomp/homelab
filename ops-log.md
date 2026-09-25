@@ -32,13 +32,27 @@ Plex back `RUNNING`, `plex.whatasave.space` → 401 (normal, auth-gated), 20:38.
 - **DLNA profiles belong in Plex's own app directory**, not under `newton/media/ps3-webman` (which also makes `ps3netsrv` startable again). User wants them there; that needs the `app.update` repoint.
 - **`ps3netsrv` left down** per user. Note its source dir `/mnt/newton/media/ps3-webman` now exists again (containing only `dlna-profiles/`), so it may auto-start on the next reboot, serving an empty games dir.
 
+### Custom PS3 profile — reconstructed (same day, follow-up)
+User asked to rebuild the lost `Custom PlayStation 3.xml` (a bitrate-limited PS3 profile). Not recoverable byte-for-byte; **reconstructed** from the 2026-06-02 draft and corrected against evidence of how the original behaved:
+
+| evidence | source | what it established |
+|---|---|---|
+| `Mapped client to profile Custom PlayStation 3 using header User-Agent / X-AV-Client-Info` | Plex DLNA logs, Aug–Sep | client name, identification headers |
+| Boots with the original: 24 profiles, one `Unrecognized setting name IgnoreTranscodeByteRangeRequests` warning, **no** `unrecognized element AudioCodec` | Plex DLNA logs | final had that setting; had replaced the draft's invalid `<AudioCodec>` |
+| `Movian.xml` (Jun 3, same effort) uses `<VideoAudioCodec>`; its comments record the XMB player direct-playing HD despite caps | archive | correct audio element; why video was dropped from direct play |
+| All 15 Custom PS3 sessions, Jul 17 – Aug 20, video-transcoded (SD included) | Tautulli `session_history` | consistent with no video direct play |
+
+Result (3,700 bytes; original 3,226): `Client name="Custom PlayStation 3"`, no video in `DirectPlayProfiles`, h264 capped at **720×480 / 6000 kbps / level 4.1 / 4 ref / 8-bit**, mpeg2 at 720×480 / 8000 kbps, stereo-only via `VideoAudioCodec`, transcode to MPEG-TS h264 with `cabac=0:ref=2:bframes=0`. Header comment in the file records the provenance. **Judgment calls, not proven:** the 6000 kbps value (from the draft; `Movian.xml` used 8000) and dropping video direct play (every observed session is also explainable by the 720-width cap alone).
+
+Placed at **`/mnt/newton/appdata/plex/dlna-profiles/`** (permanent home, with `Movian.xml`) and copied in place over the stand-in at the currently mounted path. Takes effect when Plex's DLNA server next starts — currently dead on the unrelated UPnP `-22105` error, so not yet verified in Plex. Once the app config is repointed to `appdata/plex/dlna-profiles/`, `/mnt/newton/media/ps3-webman` can be deleted again.
+
 ### ownfoil
 All mount sources present; cause unknown — `ownfoil.db` was last written 15:00, four hours before the reboot, so it may have died earlier and independently. Container logs weren't readable (no passwordless `sudo`/Docker access as `dlin` on TrueNAS). `app.start ownfoil` → `RUNNING`, and it stayed up. If it crashes again, pull its container logs first.
 
 ### Also noted
 - Last Home Assistant backup is from **2024-01-25**. Relevant to the pending HA-app deprecation migration.
 
-### Status: Plex and ownfoil restored. DLNA server, profile relocation, and ownfoil root cause open.
+### Status: Plex and ownfoil restored; custom PS3 profile reconstructed. DLNA server, app-config repoint, and ownfoil root cause open.
 
 ## 2026-09-01 (Kuma still showing services down — the missing-overlay-IP defect was systemic, not isolated)
 
