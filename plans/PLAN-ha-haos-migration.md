@@ -154,7 +154,7 @@ app is not touched.
 
 If validation can't be made to pass → switch to **fallback B** before going further.
 
-**Result 2026-09-24: PASS, 35/35 checks** — tooling in `plans/ha-migration/`
+**Result 2026-09-24: PASS, 28/28 checks** — tooling in `plans/ha-migration/`
 (`pg-to-sqlite.py`, `rehearsal-compose.yaml`, `pgdump-compose.yaml`, `rehearsal-report-20260924.json`).
 
 | step | time |
@@ -251,7 +251,7 @@ install on any Postgres.
       90.6 MB, encrypted, in `/mnt/newton/appdata/homeassistant/backups/`; emergency kit saved by user).
       Leftovers: delete throwaway app `ha-migration-pgdump` (STOPPED). Note: HA **decrypts on download** —
       the copy in Google Drive is plaintext.
-- [x] Phase 1 — Rehearse conversion — **PASS 35/35, 2026-09-24**. Leftovers: delete app `ha-migration-rehearsal` (STOPPED); scratch `rehearsal/pgdata` (~3.5 GB, owned by uid 999) needs a root-capable cleanup
+- [x] Phase 1 — Rehearse conversion — **PASS 28/28, 2026-09-24**. Leftovers: delete app `ha-migration-rehearsal` (STOPPED); scratch `rehearsal/pgdata` (~3.5 GB, owned by uid 999) needs a root-capable cleanup
 - [ ] Phase 2 — Build VM
 - [ ] Phase 3 — Cutover
 - [ ] Phase 4 — After cutover
