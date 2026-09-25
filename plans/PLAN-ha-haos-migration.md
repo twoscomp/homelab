@@ -272,7 +272,9 @@ install on any Postgres.
       dump + measurements; HA **automatic backups enabled** (`Automatic_backup_2026.9.2_2026-09-24_22.51…tar`,
       90.6 MB, encrypted, in `/mnt/newton/appdata/homeassistant/backups/`; emergency kit saved by user).
       Leftovers: delete throwaway app `ha-migration-pgdump` (STOPPED). Note: HA **decrypts on download** —
-      the copy in Google Drive is plaintext.
+      the plaintext copy and emergency kit in Google Drive were removed by the user 2026-09-25; verified
+      absent from the synced folder, Syncthing versions, TrueNAS's copy, Google Drive, and all
+      `newton/google-drive` snapshots (newest predates the download). Keep the key in the password manager.
 - [x] Phase 1 — Rehearse conversion — **PASS 28/28, 2026-09-24**. Leftovers: delete app `ha-migration-rehearsal` (STOPPED); scratch `rehearsal/pgdata` (~3.5 GB, owned by uid 999) needs a root-capable cleanup
 - [x] Phase 2 — Build VM — done 2026-09-24: VM 5 `haos`, 192.168.0.67, stopped, SkyConnect attached, autostart off
 - [ ] Phase 3 — Cutover
