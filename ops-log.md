@@ -3,6 +3,20 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-09-25 (GlusterFS leftovers removed: 100 GB LV reclaimed on each NUC)
+
+Follow-up to the 2026-09-01 gv0 decommission, at the user's request.
+
+**Pre-checks (both NUCs):** LV `ubuntu-vg/gluster` not mounted, device-mapper open count **0**, no process holding it, fstab lines already commented, `glusterd` inactive/disabled, no references in `/etc/docker`, systemd units, exports or cron.
+
+**Final archive before the irreversible step:** mounted nuc8-2's (clean) brick read-only and streamed it — excluding gluster's `.glusterfs` internals — to **`/mnt/newton/backups/gluster-brick-final-20260925.tar`** (5.06 GB, **19,457 files** = the brick's file count exactly, newest file 2026-08-20; SHA-256 in `.sha256` alongside). `newton/backups` is covered by the snapshot task. Only 4 gpg-agent runtime sockets were skipped.
+
+**Removed:** `lvremove ubuntu-vg/gluster` on nuc8-1 and nuc8-2 → VG free **728 → 828 GB** on each (unallocated; root LV not extended). Deleted the `# DECOMMISSIONED` fstab lines (backup `/etc/fstab.bak-gluster-lv-removed-20260925`) and the empty `/mnt/gluster` / `/mnt/dockerData` mount points. nuc8-1's `/mnt/dockerData` held only an empty `adguard/` tree from 2026-06-07 (zero files), removed.
+
+**Left in place:** `.env` still sets `DATADIR=/mnt/dockerData`; only `inactive-stacks/teslalogger.yaml` uses it (not deployed). Gluster packages remain installed, `glusterd` disabled.
+
+**NPM tracearr note:** proxy hosts 64/65/66 were already soft-deleted in NPM (`is_deleted=1`, April 2026) — the 2026-09-01 entry calling them live was wrong. A stale `64.conf` still sits in `data/nginx/proxy_host/`, so nginx answers `tracearr.whatasave.space` with 502; harmless.
+
 ## 2026-09-25 (Plex DLNA profiles moved into Plex's app dir — and a 5-minute blank-Plex incident)
 
 **Change:** Plex's two DLNA-profile bind mounts repointed from `/mnt/newton/media/ps3-webman/dlna-profiles/` (a folder deleted in the Sep 17 cleanup and only recreated as a stopgap) to **`/mnt/newton/appdata/plex/dlna-profiles/`**, which is covered by the `newton/appdata` snapshot task (`newton/media` has none). Pre-change config saved to `/mnt/newton/appdata/plex/app-config-before-dlna-repoint-20260925.json` (0600). User approved interrupting their own active stream.
