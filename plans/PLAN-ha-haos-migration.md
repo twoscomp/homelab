@@ -67,8 +67,8 @@ A stopped VM `openclaw` has 8 GB assigned; don't run both on a tight day.
 | Long-term | HAOS default and best-supported; DB **inside HA backups** | Community add-on to maintain; extra RAM |
 | Backups | One HA backup covers config + history | Add-on data is in HA backups too, but restore is two-part |
 
-**Recommendation: A**, with a full rehearsal that has to pass before cutover, and **B as the
-fallback** if the rehearsal can't be made to validate. 2,824 entities with a 30-day purge is
+**Decided (2026-09-24): A — SQLite**, with a full rehearsal that has to pass before cutover, and
+**B as the fallback** if the rehearsal can't be made to validate. 2,824 entities with a 30-day purge is
 well within SQLite's comfort zone, and having the history *inside* the normal HA backup is
 the durable fix for the "no backup since 2024" problem.
 
@@ -78,11 +78,14 @@ anyway.
 
 ## Open Questions
 
-- [ ] **Confirm A vs B** (recommendation: A).
-- [ ] **Who runs the root steps on TrueNAS** — `pg_dump`, throwaway rehearsal containers,
-      qcow2 → zvol, VM creation. `dlin` has no passwordless `sudo` or Docker access there.
-      Either you run them, or add a narrowly scoped permission rule for the session.
-- [ ] **VM IP** — reserve one in DHCP (likely the UniFi gateway at `192.168.0.1`; confirm).
+- [x] **A vs B** — **A, SQLite** (user, 2026-09-24).
+- [x] **Root steps on TrueNAS** — **no sudo needed.** Everything goes through the TrueNAS
+      middleware API as `dlin` (`midclt`): `vm.device.convert` (qcow2 → zvol), `vm.create`,
+      `vm.device.usb_passthrough_choices`, and throwaway custom apps via `app.create` for the dump
+      and rehearsal. Needs an `autoMode.allow` entry in `.claude/settings.local.json` (user adds it;
+      Claude can't edit its own permissions) — creates/updates/starts/stops only, deletes excluded.
+- [x] **VM IP** — **DHCP-assigned**, no reservation (user). NPM host 1 points at that IP, so if the
+      lease ever changes, HA goes unreachable through NPM until host 1 is updated — Kuma will flag it.
 - [x] **nuc8-2's LAN IP** — `192.168.0.26` per user (confirm in Phase 0); needed for `trusted_proxies`. nuc8-1 is `192.168.0.101`.
 - [ ] **Target cutover date** — before November; ideally mid-October to leave room for fallback B.
 
@@ -93,19 +96,24 @@ anyway.
 1. In HA: **Settings → System → Backups → create a full backup** (on this install it
    covers the config directory only). Record the **backup encryption key** in the password
    manager — restoring on HAOS needs it. Copy the backup file off to the NAS.
-2. As root on TrueNAS, take a **consistent dump while HA is running** (MVCC snapshot) to the
-   NAS, and keep it permanently as insurance:
-   `docker exec <postgres container> pg_dump -U home-assistant -Fc home-assistant > /mnt/newton/appdata/ha-migration/ha-pg-<date>.dump`
+2. Take a **consistent dump while HA is running** (MVCC snapshot) to the NAS, and keep it
+   permanently as insurance. No root: a throwaway custom app (`midclt call app.create`) running
+   `postgres:17.11-bookworm`, joined to the HA app's network
+   (`ix-internal-home-assistant-home-assistant-net`), runs
+   `pg_dump -h postgres -U home-assistant -Fc home-assistant` into
+   `/mnt/newton/appdata/ha-migration/ha-pg-<date>.dump` (credentials from `midclt call app.config home-assistant`).
+   Delete the throwaway app afterwards (by hand — deletes aren't pre-approved).
 3. Measure, from the same Postgres: DB size, row count per table, earliest `statistics`
    row, and `SELECT MAX(schema_version) FROM schema_changes`.
-4. Read `.storage/http` as root to see the current proxy settings.
+4. ~~Read `.storage/http`~~ — root-only and not needed; Phase 3 sets the `http:` block explicitly.
 5. Confirm nuc8-2's LAN IP is `192.168.0.26` (`ssh nuc8-2 hostname -I`).
 6. **Freeze the HA version at 2026.9.2** until cutover is done — don't update the app.
    Same version on both sides = identical recorder schema.
 
 ### Phase 1 — Rehearse the Conversion on TrueNAS (no production impact)
 
-Throwaway containers on TrueNAS, working only on the dump — the live app is not touched.
+Throwaway custom apps on TrueNAS (`midclt call app.create`), working only on the dump — the live
+app is not touched.
 
 1. Start a scratch `postgres:17.11-bookworm` and `pg_restore` the Phase 0 dump into it.
 2. Start a scratch `homeassistant/home-assistant:2026.9.2` with an empty config containing
@@ -137,7 +145,7 @@ If validation can't be made to pass → switch to **fallback B** before going fu
    headroom for SQLite and local backups), VirtIO NIC on **`br0`**.
 3. Add a USB passthrough device for the SkyConnect (`10c4:ea60`) but **don't start the VM
    while the app is running** — both would try to open the stick.
-4. Reserve the VM's IP in DHCP (MAC from the VM's NIC).
+4. IP comes from DHCP; note it on first boot.
 5. Don't onboard yet. Onboarding is where the backup gets restored, at cutover.
 
 ### Phase 3 — Cutover (downtime window: conversion time + ~30–45 min)
