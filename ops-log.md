@@ -14,7 +14,7 @@ Reviewed every template/blueprint error in the HAOS log after the migration. All
 | `int(states(...))` ×7 | **Mushroom dashboard** chips (`.storage/lovelace.mushroom_mushroom`): Tesla battery icon + colour, vacuum colour | `int()` without a fallback errors whenever the sensor is `unavailable` (startup) | battery: `is_number()` guard → grey `mdi:battery-unknown` when unavailable; vacuum: `\| int(0)`. Two solar chips already had a fallback. Edited with Core stopped (a running Core can overwrite `.storage` with its in-memory copy). |
 | `Blueprint 'Tesla Auto Software Update' … Unknown device` | `automations/tesla.yaml` "Tesla - Auto software update" | `notify_device` was a phone since removed from HA | → **Pixel 10a** (`ab73904a…`). "Tesla - Notify when on the way home" (Pixel 10a + Angie's SM-F741U1) untouched and valid. |
 
-**Remaining errors are not config:** UniFi Protect needs NVR firmware ≥ 7.2.105 (has 6.1.79); LG TV unavailable when off. **Stale mobile-app devices** still registered: four OnePlus GM1911/GM1917 and an old Pixel Watch — candidates for removal.
+**Remaining errors are not config:** UniFi Protect is **deliberately pinned at 6.1.79** (user: newer Protect had recording/scrubbing problems), so HA's integration (needs ≥ 7.2.105 since 2026.10) can't load — this disables "Outside Lights - turn on/off when person is detected" (doorbell `binary_sensor.g4_doorbell_person_detected`) and 6 dashboard entities; possible workaround Protect Alarm Manager → webhook. LG TV unavailable when off. **Stale mobile-app devices** still registered: four OnePlus GM1911/GM1917 and an old Pixel Watch — candidates for removal.
 
 ## 2026-10-16 (Home Assistant migrated to a HAOS VM on TrueNAS — history preserved)
 
