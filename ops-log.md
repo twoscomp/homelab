@@ -3,6 +3,17 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: dashboard review — Phase 1 fixes applied)
+
+Mushroom dashboard via `lovelace/config/save` (backup `.storage/lovelace.mushroom_mushroom.bak-20261017-phase1`), verified in the browser:
+- `collapsible_controls: true` on all 34 Mushroom light/fan cards (no empty grey bars when off). Room "Lights" group rows (6) → template cards showing "All off / N of M on" (tap toggle, hold more-info).
+- **Names match areas:** Home tiles + view titles TV and Games → Game Room, Laundry → Utility Room, Outdoor → Outside. "Baby" → Holden's in Climate graphs and the Vacuum room button. URL paths unchanged (`baby-room` etc.) so links still work.
+- Bedroom: bathroom fan labelled "Bathroom Fan"; added master closet light. Kitchen: added pantry light. Game Room: added TV (LG webOS, reads "unavailable" when off; normal) + Denon receiver; "Humidier" typo. Holden's Room: camera (`camera.g3_baby_medium`), Hatch button lock + clock.
+- Garage trimmed to lights, camera, solar and energy. Removed the duplicate battery/range gauges and charging glance, plus the stale "Next Update" (`input_datetime.tesla_charger_next_update`, 2024-06). Tesla view: "Charging" section gets the charging-mode cycle + limit and the solar-charge history; Source replaces Volts in the glance. The navigation glance is hidden unless a destination is set.
+- Home: Maintenance tile shows "All good / N need attention" (red), counting overdue filters, Roborock consumables ≤ 0, silent Tuya sensors and a backup older than 2 days. Home Lab: short AdGuard row names.
+- Not changed: Laundry already showed course/time remaining while running. Seasonal humidifier cards kept (bedroom card hides itself until `switch.bedroom_humidifier` is re-added).
+- **Correction:** the tesla_custom device "Tesla Model Y" (`*_tesla_model_y_*`, vehicle id …8511) is a **real second car** (odometer 25,143 vs The Last Light 71,143; reporting live while charging away from home). It only looked dead because it was asleep. **Left as is.** The dashboard only shows The Last Light.
+
 ## 2026-10-17 (HA: maintenance phone alerts; Watchman broken references 38 → 13)
 
 **`automation.maintenance_phone_alerts`** (id `maintenance_alerts`) → `notify.mobile_app_pixel_10a`, tap opens the Maintenance view:
