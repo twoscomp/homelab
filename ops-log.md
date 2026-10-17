@@ -3,6 +3,18 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-16 (Home Assistant migrated to a HAOS VM on TrueNAS — history preserved)
+
+Per `plans/PLAN-ha-haos-migration.md` (full timeline there). HA had been updated to 2026.10.1 since the rehearsal; recorder schema unchanged (53), so the conversion ran in the 2026.10.1 image — **PASS 28/28** on live data, statistics **2025-08-31 → 2026-10-16** preserved. Old app stopped 22:37 (kept as rollback); HAOS restore of the user's `20261016_pre_migration` backup; converted SQLite DB installed via the new Terminal & SSH add-on (`ssh haos`, key `~/.ssh/haos_ed25519`); NPM host 1 → **`192.168.0.67:20810`**; VM 5 autostart **on**. HA outage 22:37–23:39; history gap 22:25–23:39.
+
+**Surprises:** Core listens on **20810** (from `.storage/http`, which also already holds `use_x_forwarded_for` + `trusted_proxies 192.168.0.0/24, 172.16.0.0/16` — no `http:` YAML needed). The restored `configuration.yaml` still had `db_url: …@postgres`, so the recorder failed 10× and shut down until the line was removed (a 4-line `grep -A4` had missed it). A stale `4.conf` for soft-deleted NPM host 4 still pointed `ha.swarm.localdomain` at the old app — renamed `.orphaned-20261016`. Also: the ~300 KB/s "download" to the VM was LAN flood traffic on its tap, which sent a qBittorrent-upload theory down a dead end (upload cap tried and reverted to unlimited).
+
+**Desktop SSH:** removed the 1Password `IdentityAgent` from `~/.ssh/config` (nothing used it — servers, GitHub and commit signing all use `~/.ssh/id_ed25519`; it only caused the "signing failed" warnings). Backups in `~/.ssh/config.bak-*`.
+
+**Pre-existing, not from the migration:** UniFi Protect refuses NVR firmware 6.1.79 (needs ≥ 7.2.105 since HA 2026.10); several template errors (`weather.melissa` forecast attribute, `int()` on unavailable sensors); Tesla auto-update blueprint invalid; smartthinq deprecation notice.
+
+**Follow-ups:** rotate the HA backup encryption key and the VM console password (both pasted into the session transcript); HAOS backups to a TrueNAS share; keep the old app until ~2026-10-30, then delete it; root-owned scratch `ha-migration/{rehearsal,cutover}/pgdata` cleanup; remove the `autoMode` rule.
+
 ## 2026-09-25 (root cause: the recurring Swarm restarts are memory stalls on nuc8-1, the sole manager)
 
 Follow-up to the entry below.

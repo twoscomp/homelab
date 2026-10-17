@@ -105,7 +105,7 @@ anyway.
       lease ever changes, HA goes unreachable through NPM until host 1 is updated — Kuma will flag it.
 - [x] **Proxy source IPs** — confirmed with `ip route get 192.168.0.196`: nuc8-1 → `192.168.0.101`,
       nuc8-2 → `192.168.0.26` (nuc8-2's `.254` is its keepalived VIP, `.119` its unused Wi-Fi).
-- [ ] **Target cutover date** — before November; ideally mid-October to leave room for fallback B.
+- [x] **Target cutover date** — done **2026-10-16**.
 
 ## Phases
 
@@ -244,6 +244,28 @@ SkyConnect away from the running app (Zigbee goes down).
 **History gap:** only between the final dump and the VM coming up — the length of the
 window, nothing more.
 
+**Cutover log, 2026-10-16** (HA had been updated to **2026.10.1** on Oct 14–15 despite the freeze;
+recorder schema was still **53**, so the conversion simply ran in the 2026.10.1 image):
+
+| time | step |
+|---|---|
+| 22:24–22:25 | final `pg_dump` (281 MB) with HA running — app `ha-cutover-pgdump` |
+| 22:26–22:31 | conversion in `homeassistant/home-assistant:2026.10.1` — **PASS 28/28**, ~6 min, 1.47 GB SQLite, statistics 2025-08-31 → 2026-10-16 |
+| 22:35 | user's manual backup `20261016_pre_migration` (encrypted, HA 2026.10.1) |
+| 22:37 | **old app stopped** (outage starts), VM 5 started, same IP **192.168.0.67** |
+| 22:41–22:45 | onboarding → restore; Core 2026.10.1 running at 22:45 |
+| 22:44 | recorder **failed** (10 retries): restored `configuration.yaml` still had `db_url: …@postgres` (line 27) |
+| ~23:30 | Terminal & SSH add-on up (permanent key, `ssh haos`) |
+| 23:37–23:39 | Core stopped; `db_url` line removed; converted DB copied in (SHA-256 verified); `ha core check` OK; Core started — recorder up in 0.12 s on SQLite, no errors, no migration; ZHA coordinator up on the SkyConnect |
+| 23:4x | NPM host 1 → **`192.168.0.67:20810`**; orphaned `4.conf` (soft-deleted host 4, old app) renamed `.orphaned-20261016`; VM **autostart on** |
+
+**Corrections to the plan learned at cutover:**
+- **Core listens on 20810, not 80.** `.storage/http` (root-only on the old app) restored `server_port: 20810`. Port 80 only served the fresh, unconfigured HAOS. NPM targets `:20810`.
+- **No `http:` YAML block needed.** `.storage/http` already holds `use_x_forwarded_for: true`, `trusted_proxies: [192.168.0.0/24, 172.16.0.0/16]` (HA manages it in storage; `yaml_migration_done: true`).
+- **The `db_url` line did come across** in the backup — a check that read only 4 lines after `recorder:` missed it. Always `grep -n db_url` the whole file.
+- **History gap:** 22:25 (dump) → 23:39 (recorder up).
+- **"Downloading at ~300 KB/s" was a misread** — bridge flood traffic on the VM's tap. The VM was idle; Core was simply on another port.
+
 ### Phase 4 — After Cutover
 
 1. **Automated backups:** HAOS daily backups to a TrueNAS SMB/NFS share (Settings →
@@ -277,5 +299,5 @@ install on any Postgres.
       `newton/google-drive` snapshots (newest predates the download). Keep the key in the password manager.
 - [x] Phase 1 — Rehearse conversion — **PASS 28/28, 2026-09-24**. Leftovers: delete app `ha-migration-rehearsal` (STOPPED); scratch `rehearsal/pgdata` (~3.5 GB, owned by uid 999) needs a root-capable cleanup
 - [x] Phase 2 — Build VM — done 2026-09-24: VM 5 `haos`, 192.168.0.67, stopped, SkyConnect attached, autostart off
-- [ ] Phase 3 — Cutover
+- [x] Phase 3 — Cutover — **done 2026-10-16**, HA outage 22:37–23:39 (see below)
 - [ ] Phase 4 — After cutover
