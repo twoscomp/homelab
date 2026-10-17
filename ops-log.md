@@ -3,6 +3,19 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: infant-era config removed; Protect 7.3.70; Holden's remote built in test mode)
+
+**Infant-era config deleted** (user-approved; none referenced anywhere — Adaptive Lighting "Holden's Room" targets `light.globe_lamp_light` directly): UI scenes `Baby - Feeding/Diaper/Sleeping/Off` (scene config API), orphaned registry entry `automation.baby_scenes` (no definition left — why it was `unavailable`), UI group helper "Baby Room Lights" (`light.baby_room_lights`), and YAML `input_select.baby_scene` (removed lines 75–80 of `configuration.yaml`; its bare `off` option was why it showed state `False`; `ha core check` OK, `input_select.reload`). Backups `*.bak-20261017-infant` on HAOS.
+
+**UniFi Protect updated to 7.3.70** by the user (pin lifted) → HA integration loaded again; doorbell `binary_sensor.g4_doorbell_person_detected` confirmed to belong to the Front Door camera, so the "Outside Lights" person automations work again. Camera "G3 Baby" (Protect name now "Holden") + its UniFi Network client entry → **Holden's Room Camera** / **(Wi-Fi)**, moved to Holden's Room. **Note:** Protect entity IDs are inconsistent across cameras (`g3_instant_*`, `g4_bullet_*`, `baby_2_*` on camera "Elijah", `baby_detections_*` on `g4_living_room`) — optional rename pass offered, not done.
+
+**Holden's remote (Hue dimmer RWL020) — built, TEST MODE:**
+- Helpers `input_boolean.holden_remote_enabled` (off switch) and `input_boolean.holden_remote_test_mode` (both on).
+- `script.holden_light_toggle` → `light.globe_lamp_light`; `script.holden_hatch_story` (field `story`) → finds the live scene on Holden's Hatch whose name contains `story` at run time (survives favorites being re-created), ignores a repeat started <20 min ago while still playing, notifies if no favorite matches.
+- `automation.holden_s_remote` (id `holden_remote`): `zha_event` from `00:17:88:01:04:f6:3c:76`; Top (I) = light, Bottom (O) = "Lulu", Brighter/Dimmer = placeholders; `mode: single`, 2 s mash guard.
+- Verified by injecting `zha_event`s via the API: all four buttons, 3-press mash → 1 run, raw `on`/`step` ignored, real devices untouched.
+- **Open:** add 2 more stories as Hatch favorites and assign them; decide night behaviour (Globe Lamp is his night-light — top button turns it off); test live in his room, then turn test mode off.
+
 ## 2026-10-17 (HA: "Holden's Room" cleanup — areas, Hatch, remote)
 
 Prep for a kid remote (Hue dimmer RWL020) in Holden's room. Done through HA's **websocket API** with a user-created long-lived token at `~/.config/home-assistant/claude-token` (mode 600, never printed) and the new helper `tools/haws.py` (needs `websockets`, e.g. in a venv). Registry backups on HAOS: `.storage/core.{area,device,entity}_registry.bak-20261017-cleanup`. 39/39 calls succeeded.
