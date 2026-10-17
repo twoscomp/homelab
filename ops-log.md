@@ -3,6 +3,19 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: template and blueprint errors fixed)
+
+Reviewed every template/blueprint error in the HAOS log after the migration. All three sources are fixed; since the 00:06 restart the log has **zero** template, forecast or blueprint errors. Backups of each edited file as `*.bak-20261017` on HAOS. (HA config lives on the VM — `ssh haos` — not in this repo.)
+
+| error | source | cause | fix |
+|---|---|---|---|
+| `None has no element 0` ×4 | `templates/template.yaml` sensor **Precipitation Probability** | read `state_attr('weather.melissa','forecast')[0]` — **`weather.melissa` doesn't exist** (only `weather.pirateweather`), and weather entities lost the `forecast` attribute in HA 2024.3 anyway | rewritten as a **trigger-based** template sensor (every 15 min + on start) calling `weather.get_forecasts` (hourly) on `weather.pirateweather`; same name, so same `sensor.precipitation_probability` |
+| none (silently `unknown`) | same file, **Air Pressure** | `state_attr('weather.melissa','pressure')` — same missing entity | → `weather.pirateweather` |
+| `int(states(...))` ×7 | **Mushroom dashboard** chips (`.storage/lovelace.mushroom_mushroom`): Tesla battery icon + colour, vacuum colour | `int()` without a fallback errors whenever the sensor is `unavailable` (startup) | battery: `is_number()` guard → grey `mdi:battery-unknown` when unavailable; vacuum: `\| int(0)`. Two solar chips already had a fallback. Edited with Core stopped (a running Core can overwrite `.storage` with its in-memory copy). |
+| `Blueprint 'Tesla Auto Software Update' … Unknown device` | `automations/tesla.yaml` "Tesla - Auto software update" | `notify_device` was a phone since removed from HA | → **Pixel 10a** (`ab73904a…`). "Tesla - Notify when on the way home" (Pixel 10a + Angie's SM-F741U1) untouched and valid. |
+
+**Remaining errors are not config:** UniFi Protect needs NVR firmware ≥ 7.2.105 (has 6.1.79); LG TV unavailable when off. **Stale mobile-app devices** still registered: four OnePlus GM1911/GM1917 and an old Pixel Watch — candidates for removal.
+
 ## 2026-10-16 (Home Assistant migrated to a HAOS VM on TrueNAS — history preserved)
 
 Per `plans/PLAN-ha-haos-migration.md` (full timeline there). HA had been updated to 2026.10.1 since the rehearsal; recorder schema unchanged (53), so the conversion ran in the 2026.10.1 image — **PASS 28/28** on live data, statistics **2025-08-31 → 2026-10-16** preserved. Old app stopped 22:37 (kept as rollback); HAOS restore of the user's `20261016_pre_migration` backup; converted SQLite DB installed via the new Terminal & SSH add-on (`ssh haos`, key `~/.ssh/haos_ed25519`); NPM host 1 → **`192.168.0.67:20810`**; VM 5 autostart **on**. HA outage 22:37–23:39; history gap 22:25–23:39.
