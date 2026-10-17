@@ -3,6 +3,23 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: maintenance phone alerts; Watchman broken references 38 → 13)
+
+**`automation.maintenance_phone_alerts`** (id `maintenance_alerts`) → `notify.mobile_app_pixel_10a`, tap opens the Maintenance view:
+- Tuya temp sensor silent > 3 h or unavailable (one template trigger per sensor, 08:00–21:30 only) → "needs a battery". The 09:00 check repeats it daily while still silent, which also catches overnight failures.
+- Filters: on the due day, then every Saturday 09:00 while overdue. Intervals (HVAC 90 d, R.O. 180 d) are duplicated in the Maintenance dashboard cards, so keep the two in sync.
+- Tested: the morning path ran manually and sent "HVAC air filter is 41 days overdue" (no errors in trace); the silent-list template was exercised with a 5-min threshold.
+
+**Broken references fixed** (backups `*.bak-20261017-refs` on HAOS; Watchman now ignores `*.bak*`, report path `/config/watchman_report.txt`):
+- **AdGuard:** the integration entry was disabled and pointed at `adguard2.swarm.localdomain:80`, but standalone AdGuard serves its UI on **3000** (NPM owns 80) and the integration has no reconfigure step. Deleted the dead entry and re-added `adguard1.swarm.localdomain:3000` (.253, nuc8-1) and `adguard2.swarm.localdomain:3000` (.254) with the same stored login. Entity IDs came back as `*_adguard_home_*` and `*_2`, exactly what the Home Lab cards use.
+- **MyQ (dead since ~Oct 2023, entry disabled):** deleted the 13 automations that only drove `cover.double_garage_door`/`cover.single_garage_door`: outside lights on garage open/close, close when away, Miata/Tesla arrive/leave open/close, the `1_/2_car_cover_*` boolean sync and toggle. The `input_boolean.{1,2}_car_cover_{open,closed}` helpers are now unused (left in place).
+- Deleted script `play_holden_bedtime_songs` (Spotify integration gone, unreferenced).
+- "Turn off certain automations when away": dropped the missing `automation.set_sleep_temperatures` (probable successor `automation.thermostat_sleep`, not swapped in). "Game Room - Theater Mode": dropped the missing `scene.game_room_lights_normal` step (only "off → lights off" remains). "Garage - Turn off Box Fan": condition `switch.box_fan` (old TP-Link plug) → `fan.box_fan` (what the action targets).
+- Bedtime scene: removed `light.ceiling_round_light`/`light.elgato_key_light` from captured group attributes. Guest Room Lights group: removed Fancy Lamp (offline since before 2025-08).
+- Dashboard: Office view humidity chip removed (Office Tuya became Bedroom Tuya; no Tuya in the Office). Tesla wake button → `button.the_last_light_wake_up`, overheat tap → `select.the_last_light_cabin_overheat_protection`.
+- **LG ThinQ washer/dryer** had been unavailable since the HAOS cutover (2026-10-16); a config entry reload fixed it.
+- **Remaining 13 in Watchman are real device state, not config:** Tesla asleep (9), box fan, blue mushroom lamp + Guest Room Lights group, big humidifier. **Dead ZHA lights still registered** (unavailable since before 2025-08): Fancy Lamp (Guest Room), Ceiling Round (Office), Desk Lamp (Holden's Room); TP-Link "Box Fan" plug. Not deleted.
+
 ## 2026-10-17 (HA: Maintenance dashboard rebuilt; Tuya battery % found to be meaningless)
 
 **Finding: the 7 Tuya TS0201 temp sensors (`_TZ3000_xr3htd96`, no ZHA quirk) don't report battery.** Every unit shows `battery_voltage` exactly 2.5 V and 1–11 %, yet all keep reporting temperature every few minutes. Recorder stats from 2025-08 onward: each value is flat for months, and six of them changed in **the same hour (2026-04-16 14:00)**. That pattern comes from HA/ZHA re-reading them, not from batteries draining. Philips motion sensors and the RWL020 remote decline smoothly and are trustworthy. **Reliable dead-battery signal for the Tuyas = they go silent** (ZHA marks battery devices unavailable after 6 h, `consider_unavailable_battery` 21600).
