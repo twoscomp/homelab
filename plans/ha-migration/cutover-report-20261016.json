@@ -1,0 +1,264 @@
+{
+  "status": "PASS",
+  "timings_s": {
+    "boot1_create_schema": 51.9,
+    "clear_new_sqlite": 0.0,
+    "copy_all_tables": 157.3,
+    "validate": 11.7,
+    "sqlite_integrity": 23.3,
+    "boot2_on_converted_db": 49.6,
+    "total_job": 321.5
+  },
+  "tables": {
+    "event_data": {
+      "rows_copied": 4463,
+      "seconds": 0.1,
+      "pg_rows": 4463,
+      "sqlite_rows": 4463
+    },
+    "event_types": {
+      "rows_copied": 23,
+      "seconds": 0.0,
+      "pg_rows": 23,
+      "sqlite_rows": 23
+    },
+    "migration_changes": {
+      "rows_copied": 0,
+      "seconds": 0.0,
+      "pg_rows": 0,
+      "sqlite_rows": 0
+    },
+    "recorder_runs": {
+      "rows_copied": 5,
+      "seconds": 0.0,
+      "pg_rows": 5,
+      "sqlite_rows": 5
+    },
+    "schema_changes": {
+      "rows_copied": 4,
+      "seconds": 0.0,
+      "pg_rows": 4,
+      "sqlite_rows": 4
+    },
+    "state_attributes": {
+      "rows_copied": 547234,
+      "seconds": 6.9,
+      "pg_rows": 547234,
+      "sqlite_rows": 547234
+    },
+    "states_meta": {
+      "rows_copied": 1284,
+      "seconds": 0.0,
+      "pg_rows": 1284,
+      "sqlite_rows": 1284
+    },
+    "statistics_meta": {
+      "rows_copied": 192,
+      "seconds": 0.0,
+      "pg_rows": 192,
+      "sqlite_rows": 192
+    },
+    "statistics_runs": {
+      "rows_copied": 8857,
+      "seconds": 0.1,
+      "pg_rows": 8857,
+      "sqlite_rows": 8857
+    },
+    "events": {
+      "rows_copied": 160314,
+      "seconds": 2.5,
+      "pg_rows": 160314,
+      "sqlite_rows": 160314
+    },
+    "states": {
+      "rows_copied": 5504364,
+      "seconds": 115.2,
+      "pg_rows": 5504364,
+      "sqlite_rows": 5504364
+    },
+    "statistics": {
+      "rows_copied": 1559667,
+      "seconds": 18.2,
+      "pg_rows": 1559667,
+      "sqlite_rows": 1559667
+    },
+    "statistics_short_term": {
+      "rows_copied": 1217278,
+      "seconds": 14.3,
+      "pg_rows": 1217278,
+      "sqlite_rows": 1217278
+    }
+  },
+  "checks": [
+    {
+      "check": "boot1: HA initialized and created the SQLite file",
+      "ok": true,
+      "detail": "51.9s"
+    },
+    {
+      "check": "same table set in Postgres and HA schema",
+      "ok": true,
+      "detail": "only_pg=[] only_ha=[]"
+    },
+    {
+      "check": "schema version: Postgres == new SQLite == HA",
+      "ok": true,
+      "detail": "pg=53 sqlite=53 ha=53"
+    },
+    {
+      "check": "event_data: rows, key range and 6 column fingerprints match",
+      "ok": true,
+      "detail": "4,463 rows"
+    },
+    {
+      "check": "event_types: rows, key range and 4 column fingerprints match",
+      "ok": true,
+      "detail": "23 rows"
+    },
+    {
+      "check": "migration_changes: rows, key range and 4 column fingerprints match",
+      "ok": true,
+      "detail": "0 rows"
+    },
+    {
+      "check": "recorder_runs: rows, key range and 7 column fingerprints match",
+      "ok": true,
+      "detail": "5 rows"
+    },
+    {
+      "check": "schema_changes: rows, key range and 5 column fingerprints match",
+      "ok": true,
+      "detail": "4 rows"
+    },
+    {
+      "check": "state_attributes: rows, key range and 6 column fingerprints match",
+      "ok": true,
+      "detail": "547,234 rows"
+    },
+    {
+      "check": "states_meta: rows, key range and 4 column fingerprints match",
+      "ok": true,
+      "detail": "1,284 rows"
+    },
+    {
+      "check": "statistics_meta: rows, key range and 18 column fingerprints match",
+      "ok": true,
+      "detail": "192 rows"
+    },
+    {
+      "check": "statistics_runs: rows, key range and 3 column fingerprints match",
+      "ok": true,
+      "detail": "8,857 rows"
+    },
+    {
+      "check": "events: rows, key range and 26 column fingerprints match",
+      "ok": true,
+      "detail": "160,314 rows"
+    },
+    {
+      "check": "states: rows, key range and 35 column fingerprints match",
+      "ok": true,
+      "detail": "5,504,364 rows"
+    },
+    {
+      "check": "statistics: rows, key range and 25 column fingerprints match",
+      "ok": true,
+      "detail": "1,559,667 rows"
+    },
+    {
+      "check": "statistics_short_term: rows, key range and 25 column fingerprints match",
+      "ok": true,
+      "detail": "1,217,278 rows"
+    },
+    {
+      "check": "states_meta: identical set of entity_ids",
+      "ok": true,
+      "detail": "1284 ids"
+    },
+    {
+      "check": "statistics_meta: identical set of statistic_ids",
+      "ok": true,
+      "detail": "192 ids"
+    },
+    {
+      "check": "statistics: same time range",
+      "ok": true,
+      "detail": "2025-08-31 10:00 -> 2026-10-16 21:00"
+    },
+    {
+      "check": "statistics_short_term: same time range",
+      "ok": true,
+      "detail": "2026-09-16 04:15 -> 2026-10-16 22:15"
+    },
+    {
+      "check": "states: same time range",
+      "ok": true,
+      "detail": "2026-09-16 04:12 -> 2026-10-16 22:24"
+    },
+    {
+      "check": "SQLite integrity_check",
+      "ok": true,
+      "detail": "['ok']"
+    },
+    {
+      "check": "SQLite foreign_key_check",
+      "ok": true,
+      "detail": "0 violations"
+    },
+    {
+      "check": "boot2: HA initialized on the converted database",
+      "ok": true,
+      "detail": "49.6s"
+    },
+    {
+      "check": "boot2: no recorder / database errors in the log",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "check": "boot2: no schema migration triggered",
+      "ok": true,
+      "detail": "schema 53"
+    },
+    {
+      "check": "boot2: recorder wrote a new run (database is writable)",
+      "ok": true,
+      "detail": "recorder_runs 5 -> 6"
+    },
+    {
+      "check": "boot2: long-term statistics intact",
+      "ok": true,
+      "detail": "1,559,667 -> 1,559,667"
+    }
+  ],
+  "ranges": {
+    "statistics": {
+      "from": "2025-08-31 10:00",
+      "to": "2026-10-16 21:00"
+    },
+    "statistics_short_term": {
+      "from": "2026-09-16 04:15",
+      "to": "2026-10-16 22:15"
+    },
+    "states": {
+      "from": "2026-09-16 04:12",
+      "to": "2026-10-16 22:24"
+    }
+  },
+  "ha_schema_version": 53,
+  "sqlite_bytes": 1472401408,
+  "boot2": {
+    "before": {
+      "schema_rows": 4,
+      "schema_max": 53,
+      "recorder_runs": 5,
+      "statistics": 1559667
+    },
+    "after": {
+      "schema_rows": 4,
+      "schema_max": 53,
+      "recorder_runs": 6,
+      "statistics": 1559667
+    }
+  }
+}
