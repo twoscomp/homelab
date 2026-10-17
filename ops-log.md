@@ -44,7 +44,14 @@ New dashboard **`home-dashboard`** ("Home" in the sidebar, not admin-only); the 
     - Admin: threshold names "AC Above / Heat Below / Away AC / ...".
     - Tesla: battery and range chips rounded.
   - Measured: no unequal-height rows remain in any horizontal stack. No console errors.
-  - Noted, not changed: Climate's "Office" humidity graph uses `sensor.downstairs_humidity`, and "Upstairs" humidity uses the game-room Tuya.
+  - Humidity sources:
+    - `sensor.downstairs_humidity` is the downstairs Honeywell's own reading (correct).
+    - The upstairs T5-T6 reports no indoor humidity, and the office has no humidity sensor.
+    - So "Office" uses downstairs and "Upstairs" uses the game-room Tuya as **intentional proxies** (user confirmed).
+- **Round 5:**
+  - Seasonal humidifiers (`switch.big_humidifier`, `switch.bedroom_humidifier`) are wrapped in conditionals and hidden while unavailable/unknown (Climate, Game Room, Bedroom).
+  - Garage: removed `energy-carbon-consumed-gauge`. No CO2 source is configured, so it rendered as an empty half next to "Net imported from the grid".
+  - Room tiles get 🌡️ back next to 💧 ("🌡️70° · 💧43%").
 - Follow-up: once the user likes it, make `home-dashboard` the default for both users.
 
 ## 2026-10-17 (HA: bedroom Dreo fan light — estimated state; Brown Noise pinned)

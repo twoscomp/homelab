@@ -213,9 +213,9 @@ angie = {"type": "grid", "visibility": [{"condition": "user", "users": [ANGIE]}]
 
 # ---------- Rooms ----------
 def compact(sec):
-    """'🌡️{{ states(t, with_unit=true) }} 💧{{ states(h, with_unit=true) }}' -> '68° · 💧44%' so it fits a 360 px phone."""
+    """'🌡️{{ states(t, with_unit=true) }} 💧{{ states(h, with_unit=true) }}' -> '🌡️68° · 💧44%' so it fits a 360 px phone."""
     sec = re.sub(r"\U0001F321\uFE0F\{\{ states\('([^']+)', with_unit=true\) \}\}",
-                 r"{{ states('\1') | float(0) | round(0) | int }}°", sec)
+                 r"🌡️{{ states('\1') | float(0) | round(0) | int }}°", sec)
     sec = re.sub(r" ?\U0001F4A7\{\{ states\('([^']+)', with_unit=true\) \}\}",
                  r" · 💧{{ states('\1') | float(0) | round(0) | int }}%", sec)
     return sec.strip()
@@ -482,6 +482,33 @@ for c in cc:
                     place = place or n
                 e["name"] = n or place or e.get("name")
 
+
+
+SEASONAL = ("switch.big_humidifier", "switch.bedroom_humidifier")  # unplugged outside winter / dry months
+
+
+def final_pass(o):
+    if isinstance(o, list):
+        return [final_pass(x) for x in o]
+    if not isinstance(o, dict):
+        return o
+    o = {k: final_pass(v) for k, v in o.items()}
+    if o.get("entity") in SEASONAL and o.get("type", "").startswith("custom:mushroom"):
+        e = o["entity"]
+        return {"type": "conditional", "conditions": [
+            {"condition": "state", "entity": e, "state_not": "unavailable"},
+            {"condition": "state", "entity": e, "state_not": "unknown"}], "card": o,
+            **({"grid_options": o["grid_options"]} if "grid_options" in o else {})}
+    if o.get("type") == "horizontal-stack":
+        # the carbon gauge needs a CO2 source (none configured) and renders as an empty half
+        o["cards"] = [x for x in o["cards"] if x.get("type") != "energy-carbon-consumed-gauge"]
+        if len(o["cards"]) == 1 and "grid_options" not in o["cards"][0]:
+            one = o["cards"][0]
+            return dict(one, **({"grid_options": o["grid_options"]} if "grid_options" in o else {}))
+    return o
+
+
+home, subs = final_pass(home), final_pass(subs)
 cfg = {"title": "Home", "views": [home] + subs}
 json.dump({"type": "lovelace/config/save", "url_path": NEW, "config": cfg}, open(f"{SP}/home-save.json", "w"))
 print("views:", [v["path"] for v in cfg["views"]], "| pop-ups:", [p["hash"] for p in popups],
