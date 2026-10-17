@@ -3,6 +3,18 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: Maintenance dashboard rebuilt; Tuya battery % found to be meaningless)
+
+**Finding: the 7 Tuya TS0201 temp sensors (`_TZ3000_xr3htd96`, no ZHA quirk) don't report battery.** Every unit shows `battery_voltage` exactly 2.5 V and 1–11 %, yet all keep reporting temperature every few minutes. Recorder stats from 2025-08 onward: each value is flat for months, and six of them changed in **the same hour (2026-04-16 14:00)**. That pattern comes from HA/ZHA re-reading them, not from batteries draining. Philips motion sensors and the RWL020 remote decline smoothly and are trustworthy. **Reliable dead-battery signal for the Tuyas = they go silent** (ZHA marks battery devices unavailable after 6 h, `consider_unavailable_battery` 21600).
+
+**Maintenance view (`/mushroom-mushroom/maintenance`) rebuilt** via `lovelace/config/save` (backup `.storage/lovelace.mushroom_mushroom.bak-20261017-maint`):
+- Chips: last automatic backup age (red > 2 d), pending updates count, Watchman missing entities.
+- Filters: HVAC (90 d interval) and R.O. (180 d) show date + due/overdue with color. Tap → confirm → new `script.maintenance_mark_replaced` (field `helper`, sets the `input_datetime` to today; tested on a throwaway helper). Hold → set a custom date. At build time HVAC was **41 d overdue**.
+- Vacuums: Roborock sensors/filter/side/main brush hours left (orange < 10 % of 30/150/200/300 h life). Sensors were **98 h overdue**. Goomba bin-full. Counters reset in the Roborock app (the integration exposes no reset buttons here).
+- Temperature sensors: Tuya cards show reading + time since `last_reported` (orange > 1 h, red > 3 h or unavailable) instead of battery %.
+- Batteries: auto-entities of ZHA battery sensors excluding `*_tuya_*`, lowest first. Updates: auto-entities, shown only when any `update.*` is on.
+- Fixed: old view referenced deleted `sensor.office_tuya_battery` and omitted Bedroom Tuya (the renamed "Office"); "Consumable TImers" typo.
+
 ## 2026-10-17 (HA: infant-era config removed; Protect 7.3.70; Holden's remote built in test mode)
 
 **Infant-era config deleted** (user-approved; none referenced anywhere — Adaptive Lighting "Holden's Room" targets `light.globe_lamp_light` directly): UI scenes `Baby - Feeding/Diaper/Sleeping/Off` (scene config API), orphaned registry entry `automation.baby_scenes` (no definition left — why it was `unavailable`), UI group helper "Baby Room Lights" (`light.baby_room_lights`), and YAML `input_select.baby_scene` (removed lines 75–80 of `configuration.yaml`; its bare `off` option was why it showed state `False`; `ha core check` OK, `input_select.reload`). Backups `*.bak-20261017-infant` on HAOS.
