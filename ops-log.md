@@ -52,6 +52,9 @@ New dashboard **`home-dashboard`** ("Home" in the sidebar, not admin-only); the 
   - Seasonal humidifiers (`switch.big_humidifier`, `switch.bedroom_humidifier`) are wrapped in conditionals and hidden while unavailable/unknown (Climate, Game Room, Bedroom).
   - Garage: removed `energy-carbon-consumed-gauge`. No CO2 source is configured, so it rendered as an empty half next to "Net imported from the grid".
   - Room tiles get 🌡️ back next to 💧 ("🌡️70° · 💧43%").
+- Bedroom: added Elijah's camera (`camera.g4_instant_high_resolution_channel`, picture-glance "Elijah", same style as Holden's) under the chips.
+  - Added in the old dashboard's bedroom view (the generator's source), then home-dashboard was regenerated (backups `*.bak-20261017-elijah`).
+  - Used the high-res channel: the medium/low channels (`camera.baby_2_*`) are integration-disabled, and enabling them would reload UniFi Protect.
 - Follow-up: once the user likes it, make `home-dashboard` the default for both users.
 
 ## 2026-10-17 (HA: bedroom Dreo fan light — estimated state; Brown Noise pinned)
