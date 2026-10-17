@@ -248,6 +248,122 @@ room_cards += [
 ]
 rooms = {"type": "grid", "cards": room_cards}
 
+# ---------- Layout normalization (phones: Pixel 10a ~412 px, Galaxy Z Flip 5 ~360 px) ----------
+# Small controls (light / fan / entity / template cards) are re-flowed two per row, all with
+# fill_container and a state line, so neighbours always match. Anything wider (cameras, media players,
+# graphs, glances, ...) gets its own row. A lone small card takes the full row.
+SMALL = {"custom:mushroom-light-card", "custom:mushroom-fan-card", "custom:mushroom-entity-card", "custom:mushroom-template-card"}
+SHORT_NAMES = {  # names that truncate at ~150 px (half of a 360 px phone)
+    "Bathroom Light": "Bath Light", "Bathroom Fan": "Bath Fan", "Whole House Humidifier": "Humidifier",
+    "Big Humidier": "Humidifier", "Overhead Lights": "Overhead", "Auto Brightness and Color": "Adaptive Lighting",
+    "Remote test mode": "Test Mode", "Hatch Noise Machine": "Hatch Sound", "Flash Lights": "Flash",
+    "Clear Selections": "Clear", "Motion Sensor": "Motion", "Mushroom Lamp": "Mushroom",
+}
+
+
+def is_group_header(c):  # the room's "Lights · N of M on" row stays full width
+    return c.get("type") == "custom:mushroom-template-card" and c.get("primary") == "Lights"
+
+
+def tidy_small(c, horizontal=False):
+    c = copy.deepcopy(c)
+    for k in ("name", "primary"):
+        if c.get(k) in SHORT_NAMES:
+            c[k] = SHORT_NAMES[c[k]]
+    if c.get("secondary_info") == "none":
+        del c["secondary_info"]
+    if c.get("layout") == "vertical" and (horizontal or c["type"] != "custom:mushroom-template-card"):
+        c["layout"] = "horizontal"
+    if horizontal:
+        if c.pop("vertical", None):
+            c["layout"] = "horizontal"
+        if c["type"] == "custom:mushroom-template-card" and not c.get("secondary") and c.get("entity"):
+            c["secondary"] = "{{ states('" + c["entity"] + "') | replace('_', ' ') | title }}"  # match neighbours' state line
+    c["fill_container"] = True
+    return c
+
+
+def units(cards):
+    """Yield ('pair', [a, b]) for deliberate 2-card rows, ('single', c) for small cards, ('wide', c) otherwise."""
+    for c in cards:
+        kids = c.get("cards", [])
+        if c.get("type") == "horizontal-stack" and kids and all(x.get("type") in SMALL for x in kids):
+            headers = [x for x in kids if is_group_header(x)]
+            rest = [x for x in kids if not is_group_header(x)]
+            for h in headers:
+                yield "wide", h
+            if len(rest) == 2:
+                yield "pair", rest
+            else:
+                for x in rest:
+                    yield "single", x
+        elif c.get("type") in SMALL:
+            yield ("wide" if is_group_header(c) else "single"), c
+        elif c.get("type") == "horizontal-stack" and any(x.get("type") == "custom:mushroom-media-player-card" for x in kids):
+            for x in kids:  # media players expand when playing; each gets its own row
+                yield "wide", x
+        else:
+            yield "wide", c
+
+
+def reflow(cards, popup=False):
+    """Keep deliberate pairs; pair up stray single small cards with the next stray single (until a wide card).
+    popup=True: every row spans the pop-up's grid (Bubble Card otherwise makes lone cards half width) and all
+    small cards use the horizontal layout."""
+    out, open_slot = [], None
+
+    def tidy(c):
+        return tidy_small(c, horizontal=popup)
+    for kind, c in units(cards):
+        if kind == "pair":
+            out.append({"type": "horizontal-stack", "cards": [tidy(x) for x in c]})
+        elif kind == "single":
+            if open_slot is not None:
+                out[open_slot] = {"type": "horizontal-stack", "cards": [out[open_slot], tidy(c)]}
+                open_slot = None
+            else:
+                out.append(tidy(c))
+                open_slot = len(out) - 1
+        else:
+            open_slot = None
+            if c.get("type") in SMALL:
+                c = tidy(c)
+            elif c.get("name") in SHORT_NAMES:
+                c = dict(c, name=SHORT_NAMES[c["name"]])
+            out.append(c)
+    if popup:
+        out = [dict(c, grid_options={"columns": 12}) for c in out]
+    return out
+
+
+def round_chip(ch):
+    """Room chips: '43.64%' / '69.5 °F' -> '44%' / '70°' (same format as the Home room tiles)."""
+    e = ch.get("entity", "")
+    if ch.get("type") != "entity" or not e.startswith("sensor."):
+        return ch
+    for key, icon, color, unit in (("temperature", "mdi:thermometer", "deep-purple", "°"),
+                                   ("humidity", "mdi:water-percent", "blue", "%"),
+                                   ("illuminance", "mdi:brightness-7", "amber", " lx"), ("_range", "mdi:map-marker-distance", "blue", " mi")):
+        if key in e:
+            return {"type": "template", "entity": e, "icon": ch.get("icon", icon), "icon_color": color,
+                    "content": "{{ states('" + e + "') | float(0) | round(0) | int }}" + unit,
+                    "tap_action": {"action": "more-info"}}
+    return ch
+
+
+def strip_chips(cards):
+    out = []
+    for c in cards:
+        if c.get("type") == "custom:mushroom-chips-card":
+            c = copy.deepcopy(c)
+            c["chips"] = [round_chip(x) for x in c["chips"] if x.get("type") not in ("back", "menu", "spacer")]
+            c["alignment"] = "start"
+            if not c["chips"]:
+                continue
+        out.append(c)
+    return out
+
+
 # ---------- Room pop-ups ----------
 popups = []
 for r in ROOMS:
@@ -256,13 +372,7 @@ for r in ROOMS:
     title = cards[0].get("title") if cards and cards[0].get("type") == "custom:mushroom-title-card" else v.get("title")
     if cards and cards[0].get("type") == "custom:mushroom-title-card":
         cards = cards[1:]
-    out = []
-    for c in cards:
-        if c.get("type") == "custom:mushroom-chips-card":
-            c["chips"] = [x for x in c["chips"] if x.get("type") not in ("back", "menu")]
-            if not c["chips"]:
-                continue
-        out.append(c)
+    out = reflow(strip_chips(cards), popup=True)
     t = tile_by_nav[r]
     popups.append({
         "type": "custom:bubble-card",
@@ -286,15 +396,91 @@ home = {
 }
 
 subs = []
+VIEW_TITLES = {"climate": "Climate"}
 for p in SUBVIEWS:
     v = rewrite_nav(copy.deepcopy(views[p]), False)
     v["subview"] = True
     v["back_path"] = f"/{NEW}/home"
+    v["title"] = VIEW_TITLES.get(p, v.get("title"))
+    cards = v["cards"]
+    # the header already shows the title and a back arrow: drop a leading title card that repeats it
+    if cards and cards[0].get("type") == "custom:mushroom-title-card" and \
+            (cards[0].get("title") or "").lower().replace(" ", "") in (p, (v.get("title") or "").lower().replace(" ", ""), "vacuums", "homelab"):
+        cards = cards[1:]
+    v["cards"] = strip_chips(cards)
     subs.append(v)
-tesla_view = next(v for v in subs if v["path"] == "tesla")
-for c in tesla_view["cards"]:
+sv = {v["path"]: v for v in subs}
+
+# Tesla: 90 KB picture instead of 16.8 MB; short labels that fit a 360 px phone
+for c in sv["tesla"]["cards"]:
     if c.get("type") == "picture" and c.get("image") == "/local/ModelY_56.jpg":
-        c["image"] = "/local/tesla/normal.jpeg"  # 90 KB instead of 16.8 MB; state-driven picture comes later
+        c["image"] = "/local/tesla/normal.jpeg"
+    for x in c.get("cards", []):
+        if x.get("name") in SHORT_NAMES:
+            x["name"] = SHORT_NAMES[x["name"]]
+        if x.get("entity") == "input_number.model_y_charge_limit":
+            x["name"] = "Limit"
+    for e in c.get("entities", []) if c.get("type") == "glance" else []:
+        e["name"] = {"Energy Added": "Added", "Front Left": "Front L", "Front Right": "Front R",
+                     "Rear Left": "Rear L", "Rear Right": "Rear R"}.get(e.get("name"), e.get("name"))
+
+# Tesla battery chip: "75.0 %" -> "75%"
+for c in sv["tesla"]["cards"]:
+    for ch in c.get("chips", []):
+        if ch.get("content") == '{{ states("sensor.the_last_light_battery") }} %':
+            ch["content"] = '{{ states("sensor.the_last_light_battery") | float(0) | round(0) | int }}%'
+
+# Vacuum: room toggles 3 per row (4 truncated every name), short names
+VAC_NAMES = {"Main Floor": "Main Floor", "M. Bedroom": "Bedroom", "M. Bathroom": "Bathroom", "Office": "Office",
+             "TV/Game": "Game Room", "Study": "Study", "Holden's": "Holden's", "Guest": "Guest",
+             "G. Bathroom": "Guest Bath", "S. Bathroom": "Study Bath", "Hallway": "Hallway"}
+vc = sv["vacuum"]["cards"]
+rooms_vac = [x for c in vc if c.get("type") == "horizontal-stack" for x in c["cards"]
+             if (x.get("entity") or "").startswith("input_boolean.clean_")]
+assert len(rooms_vac) == 11, len(rooms_vac)
+for x in rooms_vac:
+    x["name"] = VAC_NAMES[x["name"]]
+first = next(i for i, c in enumerate(vc) if c.get("type") == "horizontal-stack" and rooms_vac[0] in c["cards"])
+vc[:] = [c for c in vc if not (c.get("type") == "horizontal-stack" and any(x in rooms_vac for x in c["cards"]))]
+vc[first:first] = [{"type": "horizontal-stack", "cards": rooms_vac[i:i + 3]} for i in range(0, 11, 3)]
+for c in vc:
+    for x in c.get("cards", []):
+        if x.get("primary") in SHORT_NAMES:
+            x["primary"] = SHORT_NAMES[x["primary"]]
+        if "claeaning" in (x.get("secondary") or ""):
+            x["secondary"] = x["secondary"].replace("claeaning", "cleaning")
+for i, c in enumerate(vc):
+    if c.get("type") == "horizontal-stack" and len(c["cards"]) == 4 and all(
+            (x.get("entity") or "").startswith("automation.") for x in c["cards"]):
+        vc[i:i + 1] = [{"type": "horizontal-stack", "cards": c["cards"][:2]}, {"type": "horizontal-stack", "cards": c["cards"][2:]}]
+        break
+
+# Admin: threshold names that fit
+ADMIN_NAMES = {"AC > Temperature": "AC Above", "Heater  < Threshold": "Heat Below", "Away - AC Temp": "Away AC",
+               "Away - Heater Temp": "Away Heat", "Home - AC Temp": "Home AC", "Home - Heater Temp": "Home Heat",
+               "Sleep - AC Temp": "Sleep AC", "Sleep - Heater Temp": "Sleep Heat"}
+for c in sv["admin"]["cards"]:
+    for x in c.get("cards", []):
+        if x.get("name") in ADMIN_NAMES:
+            x["name"] = ADMIN_NAMES[x["name"]]
+
+# Climate: rows stay as they are (Dog Sitting's description needs the full width); tidy single small cards;
+# graphs named by place only, whole numbers
+cc = sv["climate"]["cards"]
+for c in cc:
+    if c.get("type") == "horizontal-stack" and len(c["cards"]) == 1 and c["cards"][0].get("type") in SMALL:
+        c["cards"][0] = tidy_small(c["cards"][0])
+for c in cc:
+    if c.get("type") == "horizontal-stack" and all(x.get("type") == "custom:mini-graph-card" for x in c["cards"]):
+        place = None
+        for x in c["cards"]:
+            x["decimals"] = 0
+            for e in x["entities"]:
+                n = e.get("name") or ""
+                n = re.sub(r"\s*(Temp\.?|Temperature|Humidity)$", "", n).strip()
+                if n:
+                    place = place or n
+                e["name"] = n or place or e.get("name")
 
 cfg = {"title": "Home", "views": [home] + subs}
 json.dump({"type": "lovelace/config/save", "url_path": NEW, "config": cfg}, open(f"{SP}/home-save.json", "w"))

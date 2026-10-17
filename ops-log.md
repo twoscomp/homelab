@@ -30,6 +30,21 @@ New dashboard **`home-dashboard`** ("Home" in the sidebar, not admin-only); the 
     - 12 YAML sensors had no unique_id. Added `unique_id` (= their object id, so entity IDs stay put) in `templates/{solar,tesla,template}.yaml` and in the 3 filter sensors in `configuration.yaml` (backups `*.bak-20261017-names`).
     - 9 of those were renamed after a template reload. **The 3 `my_home_*_power_tsma` filter sensors only register after the next HA restart**; rename them then ("Solar/Home/Grid Power (2-min avg)").
   - `input_select.hvac_mode` keeps its lowercase options (89 references). New display-only **`select.thermostat_mode`** (`/config/templates/thermostat_mode.yaml`) title-cases them, maps back on select, and has a per-mode icon.
+- **Round 4 — layout alignment sweep** of all 12 room pop-ups and 6 subviews at 360 px (backup `.storage/lovelace.home_dashboard.bak-20261017-align`). Rules live in `tools/ha_home_dashboard.py`:
+  - Pop-ups:
+    - Every row spans the full width (`grid_options.columns: 12`). Bubble Card otherwise lays lone cards out half width, e.g. Closet + TV side by side.
+    - Small controls (mushroom light / fan / entity / template) get `fill_container`, the horizontal layout and a state line; template cards with no secondary get the state.
+    - Deliberate pairs are kept, and stray singles are paired with the next single.
+    - Media players and the room "Lights" header get their own rows.
+    - Room chips are rounded ("44%", "70°").
+  - Short names wherever text truncated at ~150 px: Bath Light/Fan, Motion, Mushroom, Hatch Sound, Adaptive Lighting, Test Mode, Flash, Limit, Clear. Glance labels: Added, Front L/R, Rear L/R.
+  - Subviews: removed the leading title card that repeated the header ("Tesla / Model Y", "Vacuums", ...) and every back / spacer chip (the header has a back arrow).
+    - Climate: renamed from "Climate Controls"; graphs named by place with whole numbers; "Big Humidier" → Humidifier.
+    - Vacuum: room toggles 3 per row (4 truncated every name), automations 2×2, "claeaning" typo.
+    - Admin: threshold names "AC Above / Heat Below / Away AC / ...".
+    - Tesla: battery and range chips rounded.
+  - Measured: no unequal-height rows remain in any horizontal stack. No console errors.
+  - Noted, not changed: Climate's "Office" humidity graph uses `sensor.downstairs_humidity`, and "Upstairs" humidity uses the game-room Tuya.
 - Follow-up: once the user likes it, make `home-dashboard` the default for both users.
 
 ## 2026-10-17 (HA: bedroom Dreo fan light — estimated state; Brown Noise pinned)
