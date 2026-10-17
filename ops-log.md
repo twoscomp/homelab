@@ -3,6 +3,17 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: "Holden's Room" cleanup — areas, Hatch, remote)
+
+Prep for a kid remote (Hue dimmer RWL020) in Holden's room. Done through HA's **websocket API** with a user-created long-lived token at `~/.config/home-assistant/claude-token` (mode 600, never printed) and the new helper `tools/haws.py` (needs `websockets`, e.g. in a venv). Registry backups on HAOS: `.storage/core.{area,device,entity}_registry.bak-20261017-cleanup`. 39/39 calls succeeded.
+
+- **Areas:** "Baby Room" → **"Holden's Room"** (internal `area_id` stays `workout_room_hue_lights`); empty "Kid Room" deleted.
+- **Devices renamed:** Hatch "Resty" → **Holden's Hatch**; its UniFi Wi-Fi client tracker "Rest2ndGen-61C452" (same MAC — not a 2nd Hatch) → Holden's Hatch (Wi-Fi); "Baby Tuya" → Holden's Room Climate; Philips Remote → **Holden's Remote**, now in Holden's Room.
+- **Hatch: 46 → 12 entities.** `ha_hatch` makes one scene per *current* Hatch favorite (keyed by favorite id); every favorite edit in the Hatch app leaves the old scene orphaned (Lulu had 4 generations). Removed the **28 stale** scenes (confirmed `unavailable`/`restored` via the live API); renamed the 5 live ones to `scene.holdens_hatch_{lulu_s_late_night,magical_morning,ambient_sunrise,brown_noise,spring_blossom}`. Entity IDs used by the dashboard (`media_player.resty_media_player`, `light.globe_lamp_light`, `sensor.baby_tuya_*`) deliberately kept.
+- Remote confirmed **not** Zigbee-bound to any light (presses changed nothing); it emits `zha_event` `{on,up,down,off}_short_release` (+ press/hold).
+
+**Pending user decisions:** delete infant-era config (`scene.baby_{feeding,diaper,sleeping,off}`, `input_select.baby_scene`, `automation.baby_scenes`, `light.baby_room_lights` — all unreferenced); "G3 Baby" camera is in Game Room with two device entries — move/rename once Protect is back.
+
 ## 2026-10-17 (HA: template and blueprint errors fixed)
 
 Reviewed every template/blueprint error in the HAOS log after the migration. All three sources are fixed; since the 00:06 restart the log has **zero** template, forecast or blueprint errors. Backups of each edited file as `*.bak-20261017` on HAOS. (HA config lives on the VM — `ssh haos` — not in this repo.)
