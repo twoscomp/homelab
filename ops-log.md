@@ -20,6 +20,7 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - **LG ThinQ washer/dryer** had been unavailable since the HAOS cutover (2026-10-16); a config entry reload fixed it.
 - **Remaining 13 in Watchman are real device state, not config:** Tesla asleep (9), box fan, blue mushroom lamp + Guest Room Lights group, big humidifier. **Dead ZHA lights still registered** (unavailable since before 2025-08): Fancy Lamp (Guest Room), Ceiling Round (Office), Desk Lamp (Holden's Room); TP-Link "Box Fan" plug. Not deleted.
 - **Follow-up (same night, user-approved):** removed **Fancy Lamp** (`zha.remove`; ZHA last_seen 2025-07-05; its two already-disabled start-up steps were dropped from "Guest Mode - set light start-up actions") and the **TP-Link Box Fan HS103** config entry. "Turn off certain automations when away" now also pauses/resumes **`automation.thermostat_sleep`**. **Kept Ceiling Round and Desk Lamp:** ZHA `last_seen` shows radio contact 2026-05-24 and 2025-12-09. The "unavailable since 2025-08" claim above came from state history only and was wrong for them; Ceiling Round is likely behind a wall switch. Backup `automations.yaml.bak-20261017-devices`.
+- **Then removed Ceiling Round and Desk Lamp too** (user confirmed the bulbs are gone; `zha.remove`; no remaining references).
 
 ## 2026-10-17 (HA: Maintenance dashboard rebuilt; Tuya battery % found to be meaningless)
 
