@@ -10,7 +10,14 @@ New dashboard **`home-dashboard`** ("Home" in the sidebar, not admin-only); the 
 - **Favorites** from 30 days of per-user history (logbook `context_user_id`; my API token is Daniel's, so Daniel's 10-16/17 actions were excluded): shared — Bedside Lamp, Bedroom, Fan Light (estimated), Holden's Lamp, Holden's Hatch, Roborock. **Daniel-only section** (visibility `user` 5d0a8897…): Office, Kitchen, Game Room, Garage, Holden's Desk Lamp, Thermostat mode. Angie's top controls were a subset of the shared row.
 - **Rooms:** tap a tile → **Bubble Card pop-up** with that room's cards (12 rooms); tap the icon → toggle the room's lights (Holden's Room uses `script.holden_light_toggle`, so never off at night). Utility pages (Climate, Tesla, Vacuum, Admin, Home Lab, Maintenance) copied as subviews; the Tesla picture now uses `/local/tesla/normal.jpeg` (90 KB) instead of the 16.8 MB `ModelY_56.jpg`.
 - **Installed Bubble Card v3.4.2** via HACS (frontend only, no restart). browser_mod was *not* installed after the HAOS migration (its resource 404'd) — removed that stale resource and two stale `home-assistant-sun-card` resources (unused, 404).
-- Follow-ups: bedroom "Lights N of M on" still counts the HS200 fan-light switch; once the user likes it, make `home-dashboard` the default for both users.
+- **Round 2 (user feedback from Pixel 10a; Angie has a Galaxy Z Flip 5), verified at 360 and 412 px:**
+  - Bedroom group `light.master_bedroom_lights` (UI group helper) now has `light.bedroom_fan_light` instead of the HS200 `light.master_bedroom_fan_light`, so "N of M on" and the Bedroom favorite follow the real state.
+  - The sparse chip row is replaced by labeled badges: people, weather + temperature, thermostat mode, solar W, car battery %. Vacuums and Admin moved to Rooms tiles.
+  - Tiles with built-in controls (Roborock buttons, Thermostat select) are now full width, so paired tiles are always the same height. The Hatch tile is full width with **no volume slider** (too easy to brush while scrolling).
+  - Room tiles show compact "69° · 💧44%" (it was truncated at 360 px). Daniel's row gained Study.
+  - New **Angie's** section (visibility user `d4be585f…`), seeded from her next-most-used controls (Bathroom, Bathroom Fan, Bedroom Entry, Living Room).
+  - New `sensor.lights_on_count` (`/config/templates/lights.yaml`) drives "All lights off". The old `sensor.lights_on` counted differently: 1 while the list was empty.
+- Follow-up: once the user likes it, make `home-dashboard` the default for both users.
 
 ## 2026-10-17 (HA: bedroom Dreo fan light — estimated state; Brown Noise pinned)
 

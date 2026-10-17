@@ -17,6 +17,7 @@ import sys
 SP = sys.argv[1]
 NEW = "home-dashboard"
 DANIEL = "5d0a8897a9304054aa8225fe62f5909c"  # Daniel Lin (verified via hass.user.id)
+ANGIE = "d4be585fe0c24c9890c83a0f13cb155f"  # Angie Ng
 
 src = json.load(open(f"{SP}/dash-p2.json"))["result"]
 views = {v["path"]: v for v in src["views"]}
@@ -72,12 +73,6 @@ def light_tile(entity, name=None):
     return t
 
 
-# ---------- Top: shortcuts ----------
-chips = copy.deepcopy(home_old[1])
-assert chips["type"] == "custom:mushroom-chips-card"
-chips["chips"] = [c for c in chips["chips"] if c.get("type") != "spacer"]
-chips["alignment"] = "justify"
-top = {"type": "grid", "cards": [rewrite_nav(chips, True) | full]}
 
 # ---------- Right now ----------
 LIGHTS_EXCLUDE = ["light.resty_light", "light.resty_clock", "light.master_bedroom_fan_light"]
@@ -102,7 +97,7 @@ all_off = {
     "color": "amber",
     "tap_action": {"action": "perform-action", "perform_action": "script.all_lights_off",
                    "confirmation": {"text": "Turn off all lights (except Holden's lamp and the bedroom fan light)?"}},
-    "visibility": [{"condition": "numeric_state", "entity": "sensor.lights_on", "above": 0}],
+    "visibility": [{"condition": "numeric_state", "entity": "sensor.lights_on_count", "above": 0}],
     **full,
 }
 utility_tile = tile_by_nav["utility"]
@@ -189,9 +184,10 @@ favorites = {"type": "grid", "cards": [
     light_tile("light.master_bedroom_lights", "Bedroom"),
     light_tile("light.bedroom_fan_light", "Fan Light"),
     light_tile("light.globe_lamp_light", "Holden's Lamp"),
-    {"type": "tile", "entity": "media_player.resty_media_player", "name": "Holden's Hatch", **half},
+    # no volume slider: too easy to brush while scrolling, and Holden may be asleep
+    {"type": "tile", "entity": "media_player.resty_media_player", "name": "Holden's Hatch", **full},
     {"type": "tile", "entity": "vacuum.roborock_q7_max", "name": "Roborock",
-     "features": [{"type": "vacuum-commands", "commands": ["start_pause", "return_home"]}], **half},
+     "features": [{"type": "vacuum-commands", "commands": ["start_pause", "return_home"]}], **full},
 ]}
 daniel = {"type": "grid", "visibility": [{"condition": "user", "users": [DANIEL]}], "cards": [
     heading("Daniel's", "mdi:account"),
@@ -200,11 +196,29 @@ daniel = {"type": "grid", "visibility": [{"condition": "user", "users": [DANIEL]
     light_tile("light.game_room_lights", "Game Room"),
     light_tile("light.garage_light_group", "Garage"),
     light_tile("light.holden_desk_lamp", "Holden's Desk Lamp"),
+    light_tile("light.study_light_group", "Study"),
     {"type": "tile", "entity": "input_select.hvac_mode", "name": "Thermostat", "icon": "mdi:thermostat",
-     "features": [{"type": "select-options"}], **half},
+     "features": [{"type": "select-options"}], **full},
+]}
+# Seeded from Angie's next-most-used controls after the shared row (thin data: 1-2 uses each); she can swap them.
+angie = {"type": "grid", "visibility": [{"condition": "user", "users": [ANGIE]}], "cards": [
+    heading("Angie's", "mdi:account"),
+    light_tile("light.master_bathroom_lights", "Bathroom"),
+    light_tile("fan.master_bathroom_exhaust", "Bathroom Fan"),
+    light_tile("light.master_entry", "Bedroom Entry"),
+    light_tile("light.living_room_lights", "Living Room"),
 ]}
 
 # ---------- Rooms ----------
+def compact(sec):
+    """'🌡️{{ states(t, with_unit=true) }} 💧{{ states(h, with_unit=true) }}' -> '68° · 💧44%' so it fits a 360 px phone."""
+    sec = re.sub(r"\U0001F321\uFE0F\{\{ states\('([^']+)', with_unit=true\) \}\}",
+                 r"{{ states('\1') | float(0) | round(0) | int }}°", sec)
+    sec = re.sub(r" ?\U0001F4A7\{\{ states\('([^']+)', with_unit=true\) \}\}",
+                 r" · 💧{{ states('\1') | float(0) | round(0) | int }}%", sec)
+    return sec.strip()
+
+
 room_cards = [heading("Rooms", "mdi:home")]
 for t in old_tiles:
     nav = (t.get("tap_action") or {}).get("navigation_path", "").rsplit("/", 1)[-1]
@@ -220,7 +234,16 @@ for t in old_tiles:
     else:
         n["icon_tap_action"] = {"action": "none"}
     n.update(half)
+    n["secondary"] = compact(n.get("secondary", ""))
     room_cards.append(rewrite_nav(n, True))
+room_cards += [
+    {"type": "custom:mushroom-template-card", "primary": "Vacuums", "icon": "mdi:robot-vacuum",
+     "secondary": "{% set n = states('sensor.vacuums_cleaning') | int(0) %}{{ n ~ ' cleaning' if n else 'Docked' }}",
+     "color": "{{ 'green' if states('sensor.vacuums_cleaning') | int(0) > 0 else '' }}",
+     "tap_action": {"action": "navigate", "navigation_path": f"/{NEW}/vacuum"}, **half},
+    {"type": "custom:mushroom-template-card", "primary": "Admin", "icon": "mdi:security",
+     "tap_action": {"action": "navigate", "navigation_path": f"/{NEW}/admin"}, **half},
+]
 rooms = {"type": "grid", "cards": room_cards}
 
 # ---------- Room pop-ups ----------
@@ -257,12 +280,17 @@ home = {
     "type": "sections",
     "max_columns": 3,
     "badges": [
-        {"type": "entity", "entity": "person.daniel_lin", "show_name": True, "name": "Daniel", "show_entity_picture": True},
-        {"type": "entity", "entity": "person.angie_ng", "show_name": True, "name": "Angie", "show_entity_picture": True},
-        {"type": "entity", "entity": "sensor.downstairs_current_temperature", "name": "Inside", "show_name": False},
-        {"type": "entity", "entity": "input_select.hvac_mode", "name": "Thermostat", "show_name": False, "icon": "mdi:thermostat"},
+        {"type": "entity", "entity": "person.daniel_lin", "show_name": False, "show_entity_picture": True},
+        {"type": "entity", "entity": "person.angie_ng", "show_name": False, "show_entity_picture": True},
+        {"type": "entity", "entity": "weather.pirateweather", "show_name": False, "state_content": ["state", "temperature"],
+         "tap_action": {"action": "navigate", "navigation_path": f"/{NEW}/climate"}},
+        {"type": "entity", "entity": "input_select.hvac_mode", "show_name": False, "icon": "mdi:thermostat"},
+        {"type": "entity", "entity": "sensor.my_home_solar_power", "show_name": False, "icon": "mdi:solar-power", "color": "amber",
+         "tap_action": {"action": "navigate", "navigation_path": "#garage"}},
+        {"type": "entity", "entity": "sensor.the_last_light_battery", "show_name": False, "icon": "mdi:car-electric",
+         "tap_action": {"action": "navigate", "navigation_path": f"/{NEW}/tesla"}},
     ],
-    "sections": [top, right_now, favorites, daniel, rooms, popup_section],
+    "sections": [right_now, favorites, daniel, angie, rooms, popup_section],
 }
 
 subs = []
