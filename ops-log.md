@@ -20,6 +20,7 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
   - `script.holden_hatch_story` gained an optional `favorite_id` field: it prefers that live favorite, and otherwise falls back to the name match.
   - The remote's double-tap branch passes `favorite_id: 295940064`.
   - Backups: `*.yaml.bak-20261017-brown2`.
+- **Fix: the repeat guard ignored valid presses.** Real double taps at 15:07Z resolved to the right favorite (`_2`) but were dropped. That favorite had been started from HA at 15:03Z, and the Hatch was still "playing" — Yuki, a different favorite — so the <20 min guard matched. The guard now also requires `media_player.resty_media_player.current_favorite` == the target's `hatch_favorite_id`. The user asked to swap to the other Brown Noise; I didn't, because the trace showed the selection was correct (and the other one had also been started at 15:03Z). Backup `scripts.yaml.bak-20261017-guard`.
 
 ## 2026-10-17 (HA: TV/receiver moved to Bedroom; in-laws' Tesla disabled)
 
