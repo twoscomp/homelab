@@ -3,6 +3,15 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: Phase 2 — new phone-first "Home" dashboard, side by side)
+
+New dashboard **`home-dashboard`** ("Home" in the sidebar, not admin-only); the old `mushroom-mushroom` dashboard is unchanged. Built by `tools/ha_home_dashboard.py` from the old config; verified in the browser at desktop width and at 390 px (iframe).
+- **Home view** (sections layout): people / inside temperature / thermostat badges; shortcut chips; **Right now** (cards appear only when relevant): All lights off (new `script.all_lights_off` — skips Holden's lamp + Hatch and the bedroom fan light), lights that are on (auto-entities, tap to toggle), washer/dryer time left, The Last Light when charging or (parked and unlocked / trunk / frunk / windows open), Maintenance when >0 (new `sensor.maintenance_attention`, `/config/templates/maintenance.yaml`), Hatch when playing, vacuums when out.
+- **Favorites** from 30 days of per-user history (logbook `context_user_id`; my API token is Daniel's, so Daniel's 10-16/17 actions were excluded): shared — Bedside Lamp, Bedroom, Fan Light (estimated), Holden's Lamp, Holden's Hatch, Roborock. **Daniel-only section** (visibility `user` 5d0a8897…): Office, Kitchen, Game Room, Garage, Holden's Desk Lamp, Thermostat mode. Angie's top controls were a subset of the shared row.
+- **Rooms:** tap a tile → **Bubble Card pop-up** with that room's cards (12 rooms); tap the icon → toggle the room's lights (Holden's Room uses `script.holden_light_toggle`, so never off at night). Utility pages (Climate, Tesla, Vacuum, Admin, Home Lab, Maintenance) copied as subviews; the Tesla picture now uses `/local/tesla/normal.jpeg` (90 KB) instead of the 16.8 MB `ModelY_56.jpg`.
+- **Installed Bubble Card v3.4.2** via HACS (frontend only, no restart). browser_mod was *not* installed after the HAOS migration (its resource 404'd) — removed that stale resource and two stale `home-assistant-sun-card` resources (unused, 404).
+- Follow-ups: bedroom "Lights N of M on" still counts the HS200 fan-light switch; once the user likes it, make `home-dashboard` the default for both users.
+
 ## 2026-10-17 (HA: bedroom Dreo fan light — estimated state; Brown Noise pinned)
 
 - **Bedroom Dreo fan/light is a remote-only (non-Wi-Fi) model**, as the user thought. Dreo's Wi-Fi models end in "S" (the Office fan is a DR-HCF005S); there's no purchase email to confirm the exact model. HA only sees the two HS200 wall switches, and the remote changes the light out of band.
