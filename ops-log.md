@@ -14,7 +14,8 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - `script.holden_light_toggle` → `light.globe_lamp_light`; `script.holden_hatch_story` (field `story`) → finds the live scene on Holden's Hatch whose name contains `story` at run time (survives favorites being re-created), ignores a repeat started <20 min ago while still playing, notifies if no favorite matches.
 - `automation.holden_s_remote` (id `holden_remote`): `zha_event` from `00:17:88:01:04:f6:3c:76`; Top (I) = light, Bottom (O) = "Lulu", Brighter/Dimmer = placeholders; `mode: single`, 2 s mash guard.
 - Verified by injecting `zha_event`s via the API: all four buttons, 3-press mash → 1 run, raw `on`/`step` ignored, real devices untouched.
-- **Open:** add 2 more stories as Hatch favorites and assign them; decide night behaviour (Globe Lamp is his night-light — top button turns it off); test live in his room, then turn test mode off.
+- **Update (same night):** user added Hatch favorites *Stories & Songs with Starlight* and *Yuki's Puppy Tales* (appeared after reloading the `ha_hatch` config entry; renamed to `scene.holdens_hatch_*`) → **Brighter = Starlight, Dimmer = Yuki**. **Night (20:30–09:00, matching the existing "Holden - adaptive lighting" automations) the light button never turns the lamp off**: off → red 37% (his usual night-light), on → 37% ↔ 10%; day = plain toggle with Adaptive Lighting. All four buttons re-verified in test mode.
+- **Open:** live daytime test in his room (the day path of the light button is untested), then turn test mode off.
 
 ## 2026-10-17 (HA: "Holden's Room" cleanup — areas, Hatch, remote)
 
