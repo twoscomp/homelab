@@ -54,7 +54,8 @@ New dashboard **`home-dashboard`** ("Home" in the sidebar, not admin-only); the 
   - Room tiles get 🌡️ back next to 💧 ("🌡️70° · 💧43%").
 - Bedroom: added Elijah's camera (`camera.g4_instant_high_resolution_channel`, picture-glance "Elijah", same style as Holden's) under the chips.
   - Added in the old dashboard's bedroom view (the generator's source), then home-dashboard was regenerated (backups `*.bak-20261017-elijah`).
-  - Used the high-res channel: the medium/low channels (`camera.baby_2_*`) are integration-disabled, and enabling them would reload UniFi Protect.
+  - Switched to the medium channel the same day, at the user's request: `camera.baby_2_medium_resolution_channel` was enabled and renamed to **`camera.elijah_medium`** ("Elijah Camera"), followed by an **HA Core restart** at 11:49 (back RUNNING in ~90 s). Both dashboards now use `camera.elijah_medium`.
+- After the restart, the 3 filter sensors registered their new unique_ids and were renamed "Solar/Home/Grid Power (2-min avg)". The 109 unavailable entities after the restart are the usual set: offline UniFi clients, the TV (off), Rachio off-season, disabled camera channels. The only log error is the TV being unavailable.
 - Follow-up: once the user likes it, make `home-dashboard` the default for both users.
 
 ## 2026-10-17 (HA: bedroom Dreo fan light — estimated state; Brown Noise pinned)
