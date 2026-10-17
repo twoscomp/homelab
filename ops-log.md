@@ -17,6 +17,19 @@ New dashboard **`home-dashboard`** ("Home" in the sidebar, not admin-only); the 
   - Room tiles show compact "69° · 💧44%" (it was truncated at 360 px). Daniel's row gained Study.
   - New **Angie's** section (visibility user `d4be585f…`), seeded from her next-most-used controls (Bathroom, Bathroom Fan, Bedroom Entry, Living Room).
   - New `sensor.lights_on_count` (`/config/templates/lights.yaml`) drives "All lights off". The old `sensor.lights_on` counted differently: 1 while the list was empty.
+- **Round 3:**
+  - **Right now = one strip of status pills** (mushroom chips; two lines at 360 px). It replaces the stack of cards and the old top badges.
+    - Always shown: both people (avatar; adds their location when away), weather, thermostat mode + inside temperature, the car (battery %; Driving / Charging / Unlocked / Trunk / Frunk / Windows; red when there's a problem).
+    - Solar only while producing (>50 W).
+    - Alerts only when active: lights on (opens a new `#lights` pop-up with the list + All lights off), washer/dryer time left, Hatch favorite playing, vacuums cleaning, maintenance count.
+  - **Favorites are per person** (no shared row):
+    - Daniel — Bedside, Bedroom, Fan Light, Holden's Lamp, Kitchen, Office, Garage, Holden's Desk Lamp, Game Room, Study, Thermostat.
+    - Angie — Bedside, Bedroom, Fan Light, Holden's Lamp, Bathroom, Bathroom Fan, Living Room, Bedroom Entry, Roborock.
+  - **Naming sweep (display names only, entity IDs unchanged):**
+    - 23 entities renamed in the entity registry. Examples: "hvac mode" → "HVAC Mode"; the clean_* room toggles → room names (tv_room → Game Room, workout_room → Holden's Room); the cameras.
+    - 12 YAML sensors had no unique_id. Added `unique_id` (= their object id, so entity IDs stay put) in `templates/{solar,tesla,template}.yaml` and in the 3 filter sensors in `configuration.yaml` (backups `*.bak-20261017-names`).
+    - 9 of those were renamed after a template reload. **The 3 `my_home_*_power_tsma` filter sensors only register after the next HA restart**; rename them then ("Solar/Home/Grid Power (2-min avg)").
+  - `input_select.hvac_mode` keeps its lowercase options (89 references). New display-only **`select.thermostat_mode`** (`/config/templates/thermostat_mode.yaml`) title-cases them, maps back on select, and has a per-mode icon.
 - Follow-up: once the user likes it, make `home-dashboard` the default for both users.
 
 ## 2026-10-17 (HA: bedroom Dreo fan light — estimated state; Brown Noise pinned)

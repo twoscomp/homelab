@@ -74,12 +74,93 @@ def light_tile(entity, name=None):
 
 
 
-# ---------- Right now ----------
+# ---------- Right now: one strip of status pills ----------
+# Context pills (always): people, weather, thermostat, solar (daytime), car. Alert pills appear only when
+# something is happening. Each pill opens its detail (pop-up or page), so the strip stays one or two lines.
 LIGHTS_EXCLUDE = ["light.resty_light", "light.resty_clock", "light.master_bedroom_fan_light"]
+
+
+def chip(content, icon, color, tap, entity=None, picture=None):
+    c = {"type": "template", "content": content, "tap_action": tap}
+    if picture:
+        c["picture"] = picture
+    else:
+        c["icon"] = icon
+        c["icon_color"] = color
+    if entity:
+        c["entity"] = entity
+        c["hold_action"] = {"action": "more-info"}
+    return c
+
+
+def when(conditions, c):
+    return {"type": "conditional", "conditions": conditions, "chip": c}
+
+
+def nav(path):
+    return {"action": "navigate", "navigation_path": path}
+
+
+def person_chip(entity):
+    # avatar alone when home; avatar + where they are when not
+    return chip("{{ '' if is_state('" + entity + "', 'home') else (states('" + entity + "') | replace('not_home', 'Away') | replace('_', ' ') | title) }}",
+                None, None, {"action": "more-info"}, entity=entity,
+                picture="{{ state_attr('" + entity + "', 'entity_picture') }}")
+
+
+car_alert = ("is_state('lock.the_last_light_doors', 'unlocked') or is_state('cover.the_last_light_trunk', 'open')"
+             " or is_state('cover.the_last_light_frunk', 'open') or is_state('cover.the_last_light_windows', 'open')")
+car_content = ("{% set p = [states('sensor.the_last_light_battery') | int(0) ~ '%'] %}"
+               "{% if is_state('sensor.tesla_state', 'driving') %}{% set p = p + ['Driving'] %}"
+               "{% else %}"
+               "{% if is_state('binary_sensor.the_last_light_charging', 'on') %}{% set p = p + ['Charging'] %}{% endif %}"
+               "{% if is_state('lock.the_last_light_doors', 'unlocked') %}{% set p = p + ['Unlocked'] %}{% endif %}"
+               "{% if is_state('cover.the_last_light_trunk', 'open') %}{% set p = p + ['Trunk open'] %}{% endif %}"
+               "{% if is_state('cover.the_last_light_frunk', 'open') %}{% set p = p + ['Frunk open'] %}{% endif %}"
+               "{% if is_state('cover.the_last_light_windows', 'open') %}{% set p = p + ['Windows open'] %}{% endif %}"
+               "{% endif %}{{ p | join(' · ') }}")
+car_color = ("{% if is_state('sensor.tesla_state', 'driving') %}blue{% elif " + car_alert + " %}red"
+             "{% elif is_state('binary_sensor.the_last_light_charging', 'on') %}green{% else %}grey{% endif %}")
+
+pills = {
+    "type": "custom:mushroom-chips-card",
+    "alignment": "start",
+    "chips": [
+        person_chip("person.daniel_lin"),
+        person_chip("person.angie_ng"),
+        {"type": "weather", "entity": "weather.pirateweather", "show_conditions": True, "show_temperature": True,
+         "tap_action": nav(f"/{NEW}/climate")},
+        chip("{{ states('select.thermostat_mode') }} · {{ states('sensor.downstairs_current_temperature') | float(0) | round(0) | int }}°",
+             "{{ state_attr('select.thermostat_mode', 'icon') }}", "deep-orange", nav(f"/{NEW}/climate"), entity="select.thermostat_mode"),
+        when([{"condition": "numeric_state", "entity": "sensor.my_home_solar_power", "above": 50}],
+             chip("{{ (states('sensor.my_home_solar_power') | float(0) / 1000) | round(1) }} kW", "mdi:solar-power", "amber",
+                  nav("#garage"), entity="sensor.my_home_solar_power")),
+        chip(car_content, "mdi:car-electric", car_color, nav(f"/{NEW}/tesla"), entity="sensor.the_last_light_battery"),
+        # ---- alerts ----
+        when([{"condition": "numeric_state", "entity": "sensor.lights_on_count", "above": 0}],
+             chip("{{ states('sensor.lights_on_count') }} on", "mdi:lightbulb-group", "amber", nav("#lights"))),
+        when([{"condition": "or", "conditions": [{"condition": "state", "entity": "sensor.washer", "state": "on"},
+                                                  {"condition": "state", "entity": "sensor.dryer", "state": "on"}]}],
+             chip("{% set w = is_state('sensor.washer', 'on') %}{{ 'Washer' if w else 'Dryer' }} "
+                  "{{ (state_attr('sensor.washer' if w else 'sensor.dryer', 'remain_time') | string)[:-3] }}",
+                  "mdi:washing-machine", "blue", nav("#utility"))),
+        when([{"condition": "state", "entity": "media_player.resty_media_player", "state": "playing"}],
+             chip("{{ state_attr('media_player.resty_media_player', 'current_favorite_name') or 'Hatch playing' }}",
+                  "mdi:speaker", "light-blue", nav("#baby-room"), entity="media_player.resty_media_player")),
+        when([{"condition": "numeric_state", "entity": "sensor.vacuums_cleaning", "above": 0}],
+             chip("{{ states('sensor.vacuums_cleaning') }} cleaning", "mdi:robot-vacuum", "green", nav(f"/{NEW}/vacuum"))),
+        when([{"condition": "numeric_state", "entity": "sensor.maintenance_attention", "above": 0}],
+             chip("{{ states('sensor.maintenance_attention') }}", "mdi:wrench", "red", nav(f"/{NEW}/maintenance"))),
+    ],
+    **full,
+}
+right_now = {"type": "grid", "cards": [heading("Right now", "mdi:clock-outline"), pills]}
+
+# "#lights" pop-up: what's on, tap to turn off, plus All lights off
 lights_on = {
     "type": "custom:auto-entities",
     "show_empty": False,
-    "card": {"type": "grid", "columns": 2, "square": False},
+    "card": {"type": "grid", "columns": 2, "square": False, "cards": []},  # empty list: grid rejects a missing one
     "card_param": "cards",
     "sort": {"method": "name"},
     "filter": {"template": (
@@ -87,7 +168,6 @@ lights_on = {
         " | map(attribute='entity_id') | reject('in', " + json.dumps(LIGHTS_EXCLUDE).replace('"', "'") + ") %}"
         "{{ {'type': 'tile', 'entity': e, 'tap_action': {'action': 'toggle'}, 'icon_tap_action': {'action': 'toggle'},"
         " 'hold_action': {'action': 'more-info'}} }}{{ ',' if not loop.last }}{% endfor %}]")},
-    **full,
 }
 all_off = {
     "type": "custom:mushroom-template-card",
@@ -97,116 +177,38 @@ all_off = {
     "color": "amber",
     "tap_action": {"action": "perform-action", "perform_action": "script.all_lights_off",
                    "confirmation": {"text": "Turn off all lights (except Holden's lamp and the bedroom fan light)?"}},
-    "visibility": [{"condition": "numeric_state", "entity": "sensor.lights_on_count", "above": 0}],
-    **full,
 }
-utility_tile = tile_by_nav["utility"]
-laundry = {
-    "type": "custom:mushroom-template-card",
-    "primary": "{{ 'Washer' if is_state('sensor.washer', 'on') else 'Dryer' }}",
-    "secondary": ("{% if is_state('sensor.washer', 'on') %}{{ state_attr('sensor.washer', 'remain_time') }} to go"
-                  "{% else %}{{ state_attr('sensor.dryer', 'remain_time') }} to go{% endif %}"),
-    "icon": "mdi:washing-machine",
-    "color": "blue",
-    "tap_action": {"action": "navigate", "navigation_path": "#utility"},
-    "visibility": [{"condition": "or", "conditions": [
-        {"condition": "state", "entity": "sensor.washer", "state": "on"},
-        {"condition": "state", "entity": "sensor.dryer", "state": "on"}]}],
-    **half,
-}
-hatch = {
-    "type": "custom:mushroom-media-player-card",
-    "entity": "media_player.resty_media_player",
-    "name": "Holden's Hatch",
-    "icon": "mdi:speaker",
-    "use_media_info": True,
-    "media_controls": ["play_pause_stop"],
-    "volume_controls": ["volume_set"],
-    "collapsible_controls": True,
-    "visibility": [{"condition": "state", "entity": "media_player.resty_media_player", "state": "playing"}],
-    **full,
-}
-vacuums = {
-    "type": "custom:auto-entities",
-    "show_empty": False,
-    "card": {"type": "vertical-stack"},
-    "card_param": "cards",
-    "filter": {
-        "include": [{"domain": "vacuum", "options": {
-            "type": "custom:mushroom-vacuum-card", "commands": ["start_pause", "return_home"], "icon_animation": True}}],
-        "exclude": [{"state": s} for s in ("docked", "idle", "charging", "unavailable", "unknown")],
-    },
-    **full,
-}
-tesla_issues = ("{% set p = [] %}"
-                "{% if is_state('binary_sensor.the_last_light_charging', 'on') %}{% set p = p + ['Charging ' ~ states('sensor.the_last_light_battery') ~ '%'] %}{% endif %}"
-                "{% if is_state('lock.the_last_light_doors', 'unlocked') %}{% set p = p + ['Unlocked'] %}{% endif %}"
-                "{% if is_state('cover.the_last_light_trunk', 'open') %}{% set p = p + ['Trunk open'] %}{% endif %}"
-                "{% if is_state('cover.the_last_light_frunk', 'open') %}{% set p = p + ['Frunk open'] %}{% endif %}"
-                "{% if is_state('cover.the_last_light_windows', 'open') %}{% set p = p + ['Windows open'] %}{% endif %}"
-                "{{ p | join(' · ') }}")
-tesla = {
-    "type": "custom:mushroom-template-card",
-    "primary": "The Last Light",
-    "secondary": tesla_issues,
-    "icon": "mdi:car-electric",
-    "color": ("{{ 'red' if is_state('lock.the_last_light_doors', 'unlocked') or is_state('cover.the_last_light_trunk', 'open')"
-              " or is_state('cover.the_last_light_frunk', 'open') or is_state('cover.the_last_light_windows', 'open') else 'green' }}"),
-    "tap_action": {"action": "navigate", "navigation_path": f"/{NEW}/tesla"},
-    "visibility": [{"condition": "or", "conditions": [
-        {"condition": "state", "entity": "binary_sensor.the_last_light_charging", "state": "on"},
-        {"condition": "and", "conditions": [
-            {"condition": "state", "entity": "sensor.tesla_state", "state_not": "driving"},
-            {"condition": "or", "conditions": [
-                {"condition": "state", "entity": "lock.the_last_light_doors", "state": "unlocked"},
-                {"condition": "state", "entity": "cover.the_last_light_trunk", "state": "open"},
-                {"condition": "state", "entity": "cover.the_last_light_frunk", "state": "open"},
-                {"condition": "state", "entity": "cover.the_last_light_windows", "state": "open"}]}]}]}],
-    **half,
-}
-maint = {
-    "type": "custom:mushroom-template-card",
-    "primary": "Maintenance",
-    "secondary": "{% set n = states('sensor.maintenance_attention') | int(0) %}{{ n }} need{{ 's' if n == 1 else '' }} attention",
-    "icon": "mdi:wrench",
-    "color": "red",
-    "tap_action": {"action": "navigate", "navigation_path": f"/{NEW}/maintenance"},
-    "visibility": [{"condition": "numeric_state", "entity": "sensor.maintenance_attention", "above": 0}],
-    **half,
-}
-right_now = {"type": "grid", "cards": [heading("Right now", "mdi:clock-outline"), all_off, lights_on, laundry, tesla, maint,
-                                       hatch, vacuums]}
+lights_popup = {"type": "custom:bubble-card", "card_type": "pop-up", "hash": "#lights", "name": "Lights on",
+                "icon": "mdi:lightbulb-group", "button_type": "name", "cards": [all_off, lights_on]}
 
-# ---------- Favorites ----------
-favorites = {"type": "grid", "cards": [
+# ---------- Favorites: one personal list each (from 30 days of per-user history) ----------
+daniel = {"type": "grid", "visibility": [{"condition": "user", "users": [DANIEL]}], "cards": [
     heading("Favorites", "mdi:star"),
     light_tile("light.bedside_lamp_light", "Bedside Lamp"),
     light_tile("light.master_bedroom_lights", "Bedroom"),
     light_tile("light.bedroom_fan_light", "Fan Light"),
     light_tile("light.globe_lamp_light", "Holden's Lamp"),
-    # no volume slider: too easy to brush while scrolling, and Holden may be asleep
-    {"type": "tile", "entity": "media_player.resty_media_player", "name": "Holden's Hatch", **full},
-    {"type": "tile", "entity": "vacuum.roborock_q7_max", "name": "Roborock",
-     "features": [{"type": "vacuum-commands", "commands": ["start_pause", "return_home"]}], **full},
-]}
-daniel = {"type": "grid", "visibility": [{"condition": "user", "users": [DANIEL]}], "cards": [
-    heading("Daniel's", "mdi:account"),
-    light_tile("light.office_lights", "Office"),
     light_tile("light.kitchen_lights", "Kitchen"),
-    light_tile("light.game_room_lights", "Game Room"),
+    light_tile("light.office_lights", "Office"),
     light_tile("light.garage_light_group", "Garage"),
     light_tile("light.holden_desk_lamp", "Holden's Desk Lamp"),
+    light_tile("light.game_room_lights", "Game Room"),
     light_tile("light.study_light_group", "Study"),
-    {"type": "tile", "entity": "input_select.hvac_mode", "name": "Thermostat", "icon": "mdi:thermostat",
-     "features": [{"type": "select-options"}], **full},
+    {"type": "tile", "entity": "select.thermostat_mode", "name": "Thermostat", "features": [{"type": "select-options"}], **full},
 ]}
-# Seeded from Angie's next-most-used controls after the shared row (thin data: 1-2 uses each); she can swap them.
+# Angie's: the shared bedroom/Holden items + her next-most-used (thin data: 1-2 uses each); she can swap them.
 angie = {"type": "grid", "visibility": [{"condition": "user", "users": [ANGIE]}], "cards": [
-    heading("Angie's", "mdi:account"),
+    heading("Favorites", "mdi:star"),
+    light_tile("light.bedside_lamp_light", "Bedside Lamp"),
+    light_tile("light.master_bedroom_lights", "Bedroom"),
+    light_tile("light.bedroom_fan_light", "Fan Light"),
+    light_tile("light.globe_lamp_light", "Holden's Lamp"),
     light_tile("light.master_bathroom_lights", "Bathroom"),
     light_tile("fan.master_bathroom_exhaust", "Bathroom Fan"),
-    light_tile("light.master_entry", "Bedroom Entry"),
     light_tile("light.living_room_lights", "Living Room"),
+    light_tile("light.master_entry", "Bedroom Entry"),
+    {"type": "tile", "entity": "vacuum.roborock_q7_max", "name": "Roborock",
+     "features": [{"type": "vacuum-commands", "commands": ["start_pause", "return_home"]}], **full},
 ]}
 
 # ---------- Rooms ----------
@@ -271,7 +273,7 @@ for r in ROOMS:
         "button_type": "name",
         "cards": rewrite_nav(out, True),
     })
-popup_section = {"type": "grid", "cards": popups}
+popup_section = {"type": "grid", "cards": popups + [lights_popup]}
 
 home = {
     "title": "Home",
@@ -279,18 +281,8 @@ home = {
     "icon": "mdi:home",
     "type": "sections",
     "max_columns": 3,
-    "badges": [
-        {"type": "entity", "entity": "person.daniel_lin", "show_name": False, "show_entity_picture": True},
-        {"type": "entity", "entity": "person.angie_ng", "show_name": False, "show_entity_picture": True},
-        {"type": "entity", "entity": "weather.pirateweather", "show_name": False, "state_content": ["state", "temperature"],
-         "tap_action": {"action": "navigate", "navigation_path": f"/{NEW}/climate"}},
-        {"type": "entity", "entity": "input_select.hvac_mode", "show_name": False, "icon": "mdi:thermostat"},
-        {"type": "entity", "entity": "sensor.my_home_solar_power", "show_name": False, "icon": "mdi:solar-power", "color": "amber",
-         "tap_action": {"action": "navigate", "navigation_path": "#garage"}},
-        {"type": "entity", "entity": "sensor.the_last_light_battery", "show_name": False, "icon": "mdi:car-electric",
-         "tap_action": {"action": "navigate", "navigation_path": f"/{NEW}/tesla"}},
-    ],
-    "sections": [right_now, favorites, daniel, angie, rooms, popup_section],
+    "badges": [],
+    "sections": [right_now, daniel, angie, rooms, popup_section],
 }
 
 subs = []
