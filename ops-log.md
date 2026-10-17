@@ -3,6 +3,24 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: bedroom Dreo fan light — estimated state; Brown Noise pinned)
+
+- **Bedroom Dreo fan/light is a remote-only (non-Wi-Fi) model**, as the user thought. Dreo's Wi-Fi models end in "S" (the Office fan is a DR-HCF005S); there's no purchase email to confirm the exact model. HA only sees the two HS200 wall switches, and the remote changes the light out of band.
+- New template light **`light.bedroom_fan_light`** ("Bedroom Fan Light", `/config/templates/bedroom_fan_light.yaml`). Its state is estimated from Elijah's camera (G4 Instant, `binary_sensor.g4_instant_is_dark`, ~1 s lag):
+  - fixture unpowered → off;
+  - room dark → off;
+  - night + bedside lamp off + room not dark → on;
+  - otherwise falls back to the HS200 light switch. A `basis` attribute says which rule applied.
+  - Controls still drive `light.master_bedroom_fan_light`, pending a wiring test while the baby is awake (does switching the light line off and on force the Dreo light on, or toggle it?).
+  - Bedroom dashboard "Fan Light" card now uses it (backup `.storage/lovelace.mushroom_mushroom.bak-20261017-fanlight`).
+  - First reading: wall switch "on", camera "dark", estimate "off", which matched reality (baby asleep).
+  - History hint: at 08:11:55 turning the light switch *off* made the room brighter 1 s later, so the light line may act as a toggle signal.
+- The "Elijah" camera device was moved to area Master Bedroom; it had no area.
+- **Brown Noise:** the user found that only the second favorite, 295940064 (`scene.holden_s_room_holden_s_hatch_brown_noise_2`), works.
+  - `script.holden_hatch_story` gained an optional `favorite_id` field: it prefers that live favorite, and otherwise falls back to the name match.
+  - The remote's double-tap branch passes `favorite_id: 295940064`.
+  - Backups: `*.yaml.bak-20261017-brown2`.
+
 ## 2026-10-17 (HA: TV/receiver moved to Bedroom; in-laws' Tesla disabled)
 
 - LG TV (`media_player.lg_webos_smart_tv`) and Denon receiver (`media_player.denon_avr_x3700h`) physically moved to the master bedroom: devices moved to area Master Bedroom (`bedroom`); the dashboard media-card row moved from the Game Room view to the Bedroom view, above the humidifier (backup `.storage/lovelace.mushroom_mushroom.bak-20261017-tv`). No automations referenced them.
