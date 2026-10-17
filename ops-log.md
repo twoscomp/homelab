@@ -3,6 +3,12 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: TV/receiver moved to Bedroom; in-laws' Tesla disabled)
+
+- LG TV (`media_player.lg_webos_smart_tv`) and Denon receiver (`media_player.denon_avr_x3700h`) physically moved to the master bedroom: devices moved to area Master Bedroom (`bedroom`); the dashboard media-card row moved from the Game Room view to the Bedroom view, above the humidifier (backup `.storage/lovelace.mushroom_mushroom.bak-20261017-tv`). No automations referenced them.
+- tesla_custom's second car is the user's in-laws' (lives in NJ, not needed in HA): device **disabled** (`disabled_by: user`, renamed "Tesla Model Y (in-laws, NJ)"). Re-enable it under Settings → Devices if ever needed. No automations or dashboards referenced it.
+- Finding, not changed: the bedroom's new Dreo fan + light is **not in HA**. The only Dreo device (DR-HCF005S, `fan.ceiling_fan` / `light.ceiling_fan_light`) is the **Office** fan, which the Office motion automations use. Bedroom HA only sees the two HS200 wall switches (`fan.master_bedroom_fan` = power to the fixture, `light.master_bedroom_fan_light`), so the light's real state is unknown whenever the Dreo remote is used.
+
 ## 2026-10-17 (HA: Holden's remote — parent hold + double-tap)
 
 `automation.holden_s_remote` (id `holden_remote`) gained two parent gestures (backups `automations.yaml`/`scripts.yaml.bak-20261017-hold`):
