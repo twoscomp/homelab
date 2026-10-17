@@ -3,6 +3,19 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: appliance cleaning reminders — washer + dishwasher)
+
+- New `input_datetime.washer_cleaned` and `input_datetime.dishwasher_cleaned` (YAML in `configuration.yaml`, next to the filter dates; backups `*.bak-20261017-cleaning`). Both started at 2026-10-17 because HA defaults date-only helpers to today; the user can hold the cards to set real dates.
+- Intervals: **washer 30 days or 30 washes**, **dishwasher 30 days**.
+  - The washer also uses LG ThinQ's `sensor.washer` attribute `tubclean_count` (washes since the last Tub Clean cycle; a *string*, currently "15"; LG recommends a tub clean every 30 washes).
+  - The dishwasher isn't in HA, so it's date only.
+- Maintenance dashboard: new **Appliances** section (Washer "15/30 washes · due in 30 d", Dishwasher "Cleaned … · due in …"). Tap = cleaned today (`script.maintenance_mark_replaced`); hold = set a date. Added in the old dashboard's view (the generator's source), then home-dashboard was regenerated.
+- `sensor.maintenance_attention` counts them. The old dashboard's Home Maintenance tile now reads that sensor instead of its own copy of the rules.
+- `automation.maintenance_phone_alerts`:
+  - Its "filters" list became **Home maintenance**, covering all four items: due day, then Saturdays while overdue, or for the washer while it's at 30+ washes.
+  - Notification taps now open `/home-dashboard/maintenance`.
+- New `automation.maintenance_washer_tub_clean_detected`: when `tubclean_count` drops to 0 (a Tub Clean cycle ran), it sets `washer_cleaned` to today. It's a template trigger because the attribute is a string. **Untested until the next real tub clean.**
+
 ## 2026-10-17 (HA: Phase 2 — new phone-first "Home" dashboard, side by side)
 
 New dashboard **`home-dashboard`** ("Home" in the sidebar, not admin-only); the old `mushroom-mushroom` dashboard is unchanged. Built by `tools/ha_home_dashboard.py` from the old config; verified in the browser at desktop width and at 390 px (iframe).
