@@ -3,6 +3,13 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: Holden's remote — parent hold + double-tap)
+
+`automation.holden_s_remote` (id `holden_remote`) gained two parent gestures (backups `automations.yaml`/`scripts.yaml.bak-20261017-hold`):
+- **Hold O ~2.5 s → Hatch off** (new `script.holden_hatch_off` → `media_player.media_stop`, which powers the whole Hatch off, sound + light). `off_hold` fires ~1 s into a hold; the branch then waits 1.5 s for `off_long_release` and only acts if the button is still held, so a short toddler hold does nothing. A hold never emits `off_short_release`, so it can't start Lulu.
+- **Double-tap O / Brighter / Dimmer → Brown Noise** via `script.holden_hatch_story` (existing Hatch favorite `scene.holdens_hatch_brown_noise`). The ZHA Philips quirk (`PhilipsRWLFirstGen`) debounces taps by 300 ms and emits `*_double_press` *instead of* `*_short_release`, so a double tap never also starts the single-tap story. Triple+ taps (mashing) do nothing.
+- Tested with synthetic `zha_event`s in test mode (double tap → Brown Noise; long hold → Hatch off; 0.5 s hold → nothing), then test mode put back off (user had already turned it off after the live test).
+
 ## 2026-10-17 (HA: dashboard review — Phase 1 fixes applied)
 
 Mushroom dashboard via `lovelace/config/save` (backup `.storage/lovelace.mushroom_mushroom.bak-20261017-phase1`), verified in the browser:
