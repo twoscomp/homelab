@@ -13,7 +13,9 @@ Per `plans/PLAN-ha-haos-migration.md` (full timeline there). HA had been updated
 
 **Pre-existing, not from the migration:** UniFi Protect refuses NVR firmware 6.1.79 (needs ≥ 7.2.105 since HA 2026.10); several template errors (`weather.melissa` forecast attribute, `int()` on unavailable sensors); Tesla auto-update blueprint invalid; smartthinq deprecation notice.
 
-**Follow-ups:** rotate the HA backup encryption key and the VM console password (both pasted into the session transcript); HAOS backups to a TrueNAS share; keep the old app until ~2026-10-30, then delete it; root-owned scratch `ha-migration/{rehearsal,cutover}/pgdata` cleanup; remove the `autoMode` rule.
+**Done the same night:** HA backup encryption key and VM console password rotated (user); HAOS backups to TrueNAS via NFS share #6 → `/mnt/newton/backups/haos` (VM-only, inside the `newton/backups` snapshot task), first encrypted backup 637 MB including the recorder DB. Backups made before the rotation need the old key.
+
+**Follow-ups:** keep the old app until ~2026-10-30, then delete it; root-owned scratch `ha-migration/{rehearsal,cutover}/pgdata` cleanup; remove the `autoMode` rule.
 
 ## 2026-09-25 (root cause: the recurring Swarm restarts are memory stalls on nuc8-1, the sole manager)
 

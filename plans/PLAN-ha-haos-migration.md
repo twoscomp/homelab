@@ -270,6 +270,12 @@ recorder schema was still **53**, so the conversion simply ran in the 2026.10.1 
 
 1. **Automated backups:** HAOS daily backups to a TrueNAS SMB/NFS share (Settings →
    System → Storage → network storage), with the encryption key saved.
+   **Done 2026-10-16:** folder `/mnt/newton/backups/haos` (inside the `newton/backups` snapshot task — a plain
+   folder, since that task isn't recursive), **NFS share #6** restricted to `192.168.0.67`, maproot root:wheel;
+   HAOS mount `truenas_backups` (`ha mounts add … --usage backup --type nfs`; note `--location=NAME` needs the
+   `=`), now the default backup mount; user enabled it as a location alongside local. First run 23:52:
+   637 MB, encrypted, **includes the recorder DB**. Backup + VM-console keys rotated by the user after cutover —
+   backups from before the rotation (incl. `20261016_pre_migration`) still need the **old** key.
 2. Kuma: confirm the HA monitor is green; repoint any monitor that targets `:20810` directly.
 3. Let discovery work now that HA is on the LAN — review newly discovered devices.
 4. Keep the stopped app for **14 days** as the rollback point.
