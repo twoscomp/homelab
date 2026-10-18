@@ -15,7 +15,7 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
 **Logs as dlin (no sudo):** `/var/log/*` is root:adm, but the middleware can fetch them — `midclt call core.download filesystem.get '["/var/log/kern.log"]' kern.log` returns a `/_download/...` URL to `curl` from `http://127.0.0.1` on TrueNAS.
 
-**Proposed fix (awaiting the user):** disable segmentation offload on the I219 at boot — TrueNAS Init/Shutdown Script, POSTINIT command `ethtool -K enp0s31f6 tso off gso off` (needs root to apply now; persists across updates). Fallback if hangs continue: also `gro off`, or a PCIe/USB NIC on a different chipset.
+**Fix (user-approved):** TrueNAS Init/Shutdown Script **id 1**, POSTINIT command `/usr/sbin/ethtool -K enp0s31f6 tso off gso off` (timeout 10 s; System → Advanced → Init/Shutdown Scripts). Takes effect at the next boot unless applied by hand as root (`sudo ethtool -K enp0s31f6 tso off gso off` in the TrueNAS shell); verify with `ethtool -k enp0s31f6 | grep segmentation`. Undo: delete script 1 and reboot, or `ethtool -K … tso on gso on`. Fallback if hangs continue: also `gro off`, or a PCIe/USB NIC on a different chipset.
 
 ## 2026-10-17 (HA: Home Lab dashboard rebuilt — servers, NAS, network, DNS, updates, media)
 
