@@ -149,6 +149,9 @@ pills = {
                   "mdi:speaker", "light-blue", nav("#baby-room"), entity="media_player.resty_media_player")),
         when([{"condition": "numeric_state", "entity": "sensor.vacuums_cleaning", "above": 0}],
              chip("{{ states('sensor.vacuums_cleaning') }} cleaning", "mdi:robot-vacuum", "green", nav(f"/{NEW}/vacuum"))),
+        when([{"condition": "numeric_state", "entity": "sensor.home_lab_problems", "above": 0}],
+             chip("{% set p = state_attr('sensor.home_lab_problems', 'problems') or [] %}{{ p[0] if p | count == 1 else p | count ~ ' lab issues' }}",
+                  "mdi:server-network", "red", nav(f"/{NEW}/homelab"))),
         when([{"condition": "numeric_state", "entity": "sensor.maintenance_attention", "above": 0}],
              chip("{{ states('sensor.maintenance_attention') }}", "mdi:wrench", "red", nav(f"/{NEW}/maintenance"))),
     ],
@@ -160,7 +163,7 @@ right_now = {"type": "grid", "cards": [heading("Right now", "mdi:clock-outline")
 lights_on = {
     "type": "custom:auto-entities",
     "show_empty": False,
-    "card": {"type": "grid", "columns": 2, "square": False, "cards": []},  # empty list: grid rejects a missing one
+    "card": {"type": "grid", "columns": 2, "square": False},  # no "cards" here: auto-entities merges this over its list
     "card_param": "cards",
     "sort": {"method": "name"},
     "filter": {"template": (
@@ -482,6 +485,161 @@ for c in cc:
                     place = place or n
                 e["name"] = n or place or e.get("name")
 
+
+
+# ---------- Home Lab: rebuilt here (the old view was two long AdGuard lists and a dead button) ----------
+# Sources: Glances on each NUC (monitoring stack), System Monitor (HA VM), TrueNAS push
+# (scripts/truenas-ha-push.py -> templates/truenas.yaml), UniFi, ping, AdGuard, Tautulli, Uptime Kuma.
+# Problems are computed once in custom_templates/homelab.jinja -> sensor.home_lab_problems.
+def c_of(e):  # °F sensor -> whole °C (HA's unit system is imperial; CPU/disk temps read better in °C)
+    return "((states('" + e + "') | float(0) - 32) * 5 / 9) | round(0) | int"
+
+
+def pct(e):
+    return "states('" + e + "') | float(0) | round(0) | int"
+
+
+def stat(primary, secondary, icon, color, tap=None, entity=None, **extra):
+    c = {"type": "custom:mushroom-template-card", "primary": primary, "secondary": secondary, "icon": icon,
+         "color": color, "multiline_secondary": True, **full, **extra}
+    if entity:
+        c["entity"] = entity
+        c["hold_action"] = {"action": "more-info"}
+    c["tap_action"] = tap or ({"action": "more-info"} if entity else {"action": "none"})
+    return c
+
+
+def url(u):
+    return {"action": "url", "url_path": u}
+
+
+def nuc(host):
+    h = host.replace("-", "_")
+    up = f"is_state('binary_sensor.ping_{h}', 'on')"
+    return stat(
+        host,
+        "{% if not " + up + " %}Unreachable{% else %}CPU {{ " + pct(f"sensor.{h}_cpu_usage") + " }}% · RAM {{ " + pct(f"sensor.{h}_memory_usage") +
+        " }}% · Disk {{ " + pct(f"sensor.{h}_rootfs_disk_usage") + " }}% · {{ " + c_of(f"sensor.{h}_package_id_0_temperature") + " }}°C\n"
+        "{{ states('sensor." + h + "_containers_active') }} containers · up {{ relative_time(states('sensor." + h + "_uptime') | as_datetime) }}{% endif %}",
+        "mdi:server",
+        "{% if not " + up + " %}red{% elif " + c_of(f"sensor.{h}_package_id_0_temperature") + " >= 90 or states('sensor." + h +
+        "_rootfs_disk_usage') | float(0) > 85 %}orange{% else %}green{% endif %}",
+        entity=f"sensor.{h}_cpu_usage")
+
+
+hl_problems = "state_attr('sensor.home_lab_problems', 'problems') or []"
+status_card = stat(
+    "{% set p = " + hl_problems + " %}{{ 'All systems normal' if not p else (p | count ~ (' issue' if p | count == 1 else ' issues')) }}",
+    "{% set p = " + hl_problems + " %}{{ p | join(' · ') if p else 'Network, servers, NAS and DNS all OK' }}",
+    "{{ 'mdi:alert-circle' if " + hl_problems + " else 'mdi:check-circle' }}",
+    "{{ 'red' if " + hl_problems + " else 'green' }}", entity="sensor.home_lab_problems")
+services_card = {
+    "type": "conditional", "conditions": [{"condition": "state", "entity": "sensor.services_up", "state_not": "unknown"}],
+    "card": stat(
+        "Services {{ states('sensor.services_up') }}/{{ state_attr('sensor.services_up', 'total') }} up",
+        "{% set d = state_attr('sensor.services_up', 'down') or [] %}{{ ('Down: ' ~ d | join(', ')) if d else 'All Uptime Kuma monitors up' }}",
+        "mdi:list-status", "{{ 'red' if state_attr('sensor.services_up', 'down') else 'green' }}",
+        tap=url("https://dlin-uptime-kuma.fly.dev/dashboard")),
+    **full}
+
+ha_card = stat(
+    "Home Assistant",
+    "CPU {{ " + pct("sensor.system_monitor_processor_use") + " }}% · RAM {{ " + pct("sensor.system_monitor_memory_usage") +
+    " }}% · Disk {{ " + pct("sensor.system_monitor_disk_usage_config") + " }}%\n"
+    "Backup {{ relative_time(states('sensor.backup_last_successful_automatic_backup') | as_datetime) }} ago"
+    " · next {{ as_timestamp(states('sensor.backup_next_scheduled_automatic_backup')) | timestamp_custom('%a %-I %p') }}",
+    "mdi:home-assistant",
+    "{% set b = states('sensor.backup_last_successful_automatic_backup') | as_datetime %}"
+    "{{ 'red' if b is none or now() - b > timedelta(days=2) else 'light-blue' }}",
+    entity="sensor.backup_last_successful_automatic_backup")
+nas_card = stat(
+    "TrueNAS · newton",
+    "{% if is_state('binary_sensor.ping_truenas', 'off') %}Unreachable{% else %}"
+    "Pool {{ states('sensor.truenas_pool_used') | float(0) | round(0) | int }}% full · {{ state_attr('sensor.truenas_pool_used', 'free_tb') }} TB free"
+    " · {{ states('sensor.truenas_pool') | title }}\n"
+    "Scrub {{ as_timestamp(states('sensor.truenas_last_scrub')) | timestamp_custom('%b %-d') }}"
+    " · {{ states('sensor.truenas_apps') }} apps · disks {{ " + c_of("sensor.truenas_disk_temp") + " }}°C{% endif %}",
+    "mdi:nas",
+    "{% if is_state('binary_sensor.ping_truenas', 'off') or not is_state('sensor.truenas_pool', 'ONLINE') %}red"
+    "{% elif states('sensor.truenas_pool_used') | float(0) >= 90 or state_attr('sensor.truenas_apps', 'problem') %}orange{% else %}green{% endif %}",
+    entity="sensor.truenas_pool_used")
+
+net_card = stat(
+    "Internet",
+    "{% if is_state('binary_sensor.ping_internet', 'on') %}Online · {{ states('sensor.internet_ping') | float(0) | round(0) | int }} ms{% else %}Offline{% endif %}"
+    " · {{ states('sensor.internetofmakis') | int(0) + states('sensor.makimansion_2') | int(0) + states('sensor.makisonly') | int(0) }} Wi-Fi devices\n"
+    "Gateway CPU {{ " + pct("sensor.dream_machine_pro_cpu_utilization_2") + " }}% · RAM {{ " + pct("sensor.dream_machine_pro_memory_utilization_2") + " }}%"
+    "{% set off = [('Switch', 'sensor.usw_16_poe_state'), ('Downstairs AP', 'sensor.downstairs_u6_lr_state'), ('Upstairs AP', 'sensor.upstairs_u6_lr_state')]"
+    " | rejectattr(1, 'is_state', 'connected') | map(attribute=0) | list %}"
+    "{{ ' · ' ~ off | join(', ') ~ ' offline' if off else ' · switch + 2 APs online' }}",
+    "mdi:wan",
+    "{{ 'green' if is_state('binary_sensor.ping_internet', 'on') else 'red' }}",
+    entity="binary_sensor.ping_internet")
+
+ag = [("1", ""), ("2", "_2")]
+dns_line = "".join(
+    "{{ '" + n + ": ' ~ (states('sensor.adguard_home_dns_queries" + sfx + "') | int(0) / 1000) | round(0) | int ~ 'k queries · '"
+    " ~ states('sensor.adguard_home_dns_queries_blocked_ratio" + sfx + "') | float(0) | round(1) ~ '% blocked · '"
+    " ~ states('sensor.adguard_home_average_processing_speed" + sfx + "') | float(0) | round(0) | int ~ ' ms' }}" + ("\n" if n == "1" else "")
+    for n, sfx in ag)
+both_on = [{"condition": "state", "entity": "switch.adguard_home_filtering", "state": "on"},
+           {"condition": "state", "entity": "switch.adguard_home_filtering_2", "state": "on"}]
+ag_switches = {"entity_id": ["switch.adguard_home_filtering", "switch.adguard_home_filtering_2"]}
+dns_on = stat("Ad blocking on", dns_line, "mdi:shield-check", "green",
+              tap={"action": "perform-action", "perform_action": "script.pause_ad_blocking",
+                   "confirmation": {"text": "Pause ad blocking on both AdGuards for 5 minutes?"}})
+dns_on["secondary"] = "Tap to pause 5 min\n" + dns_line
+dns_off = stat("Ad blocking paused", "Tap to resume now\n" + dns_line, "mdi:shield-off-outline", "orange",
+               tap={"action": "perform-action", "perform_action": "switch.turn_on", "target": ag_switches})
+dns_cards = [dict(dns_on, visibility=both_on),
+             dict(dns_off, visibility=[{"condition": "or", "conditions": [
+                 {"condition": "state", "entity": e, "state_not": "on"} for e in ag_switches["entity_id"]]}])]
+
+updates = {
+    "type": "custom:auto-entities", "show_empty": False,
+    "card": {"type": "grid", "columns": 1, "square": False}, "card_param": "cards",
+    "filter": {"template": (
+        "[{% for e in states.update | selectattr('state', 'eq', 'on') | map(attribute='entity_id') | sort %}"
+        "{{ {'type': 'tile', 'entity': e} }}{{ ',' if not loop.last }}{% endfor %}]")},
+    **full}
+up_to_date = {"type": "conditional", "conditions": [{"condition": "state", "entity": "sensor.updates_available", "state": "0"}],
+              "card": stat("Everything up to date", "HA, OS, add-ons, HACS and device firmware", "mdi:check-decagram", "green"), **full}
+watchman = {"type": "conditional", "conditions": [{"condition": "numeric_state", "entity": "sensor.watchman_missing_entities", "above": 0}],
+            "card": stat("{{ states('sensor.watchman_missing_entities') }} broken entity references",
+                         "Found by Watchman · details in watchman_report.txt",
+                         "mdi:link-variant-off", "amber", entity="sensor.watchman_missing_entities"), **full}
+
+plex_card = stat(
+    "Plex",
+    "{% set n = states('sensor.tautulli_watching') | int(0) %}"
+    "{{ 'Nobody watching' if n == 0 else (n ~ (' stream' if n == 1 else ' streams') ~ ' · ' ~ (states('sensor.tautulli_total_bandwidth') | float(0) / 1000) | round(1) ~ ' Mbps') }}",
+    "mdi:play-box-multiple", "{{ 'amber' if states('sensor.tautulli_watching') | int(0) > 0 else 'grey' }}",
+    tap=url("http://tautulli.swarm.localdomain"))
+streams = {
+    "type": "custom:auto-entities", "show_empty": False,
+    "card": {"type": "grid", "columns": 1, "square": False}, "card_param": "cards",
+    "filter": {"template": (
+        "[{% for e in integration_entities('tautulli') | select('match', 'sensor\\\\..*_state$')"
+        " | select('is_state', ['playing', 'paused', 'buffering']) %}"
+        "{{ {'type': 'custom:mushroom-template-card', 'entity': e, 'multiline_secondary': true,"
+        " 'primary': state_attr(e, 'friendly_name') | replace(' State', ''),"
+        " 'secondary': (states(e | replace('_state', '_full_title')) ~ ' · ' ~ states(e)),"
+        " 'icon': 'mdi:play-circle' if is_state(e, 'playing') else 'mdi:pause-circle', 'color': 'amber'} }}"
+        "{{ ',' if not loop.last }}{% endfor %}]")},
+    **full}
+
+homelab = {
+    "title": "Home Lab", "path": "homelab", "subview": True, "back_path": f"/{NEW}/home",
+    "type": "sections", "max_columns": 2,
+    "sections": [
+        {"type": "grid", "cards": [heading("Status", "mdi:heart-pulse"), status_card, services_card]},
+        {"type": "grid", "cards": [heading("Servers", "mdi:server"), nuc("nuc8-1"), nuc("nuc8-2"), nas_card, ha_card]},
+        {"type": "grid", "cards": [heading("Network", "mdi:lan"), net_card, *dns_cards]},
+        {"type": "grid", "cards": [heading("Updates", "mdi:update"), up_to_date, updates, watchman]},
+        {"type": "grid", "cards": [heading("Media", "mdi:play-box-multiple"), plex_card, streams]},
+    ],
+}
+subs = [homelab if v["path"] == "homelab" else v for v in subs]
 
 
 SEASONAL = ("switch.big_humidifier", "switch.bedroom_humidifier")  # unplugged outside winter / dry months

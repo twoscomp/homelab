@@ -3,6 +3,29 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (HA: Home Lab dashboard rebuilt — servers, NAS, network, DNS, updates, media)
+
+The old Home Lab view was two 5-row AdGuard lists plus a **dead "Pause Filtering" button** (`input_button.pause_filtering`; nothing referenced it after the HAOS migration, last pressed 2026-04-24). Rebuilt as a sections view in `tools/ha_home_dashboard.py` (no longer copied from the old dashboard): **Status** (problem summary, Uptime Kuma services), **Servers** (nuc8-1, nuc8-2, TrueNAS, HA VM), **Network** (internet, gateway, Wi-Fi devices, switch/APs; AdGuard both instances in one card, tap = pause 5 min), **Updates** (pending `update.*`, Watchman broken references), **Media** (Plex streams via Tautulli, who's watching what). Checked at 360 px. Home's "Right now" strip gets a red pill only when `sensor.home_lab_problems` > 0.
+
+**New data sources:**
+- **Glances** `nicolargo/glances:4.5.7-full` as `monitoring_glances` (global, host network, :61208, 160 MB limit; ~94 MB used) → HA Glances integration for both NUCs. Kept 10 sensors per host (`sensor.nuc8_{1,2}_{cpu_usage,memory_usage,rootfs_disk_usage,package_id_0_temperature,containers_active,…}`), disabled ~190 others (veth interfaces, bind mounts). Note: my workstation can't reach :61208 (sandbox); HA can.
+- **System Monitor** (HA VM): CPU, memory, /config disk, load, boot time enabled.
+- **Ping** binary sensors: `binary_sensor.ping_{internet,nuc8_1,nuc8_2,truenas,dns_vip_1,dns_vip_2}` (+ `sensor.internet_ping` round trip).
+- **Tautulli** (`http://tautulli.swarm.localdomain`, key read from its config.ini, never printed). It makes one sensor per Plex user; enabled their `_full_title` sensors for the "who's watching" list.
+- **TrueNAS push**, not an integration: the only maintained HACS integration (tomaae) targets 25.04 and the 25.10-capable one has 1 star — not giving either a NAS key. `scripts/truenas-ha-push.py` runs as TrueNAS **cron job id 4** (user dlin, every 5 min, output hidden) from `/mnt/newton/appdata/ha-push/`, reads the middleware read-only (`pool.query`, `alert.list`, `app.query`, `disk.temperatures`, `system.info`) and POSTs to an HA webhook (id in HA `secrets.yaml` and `ha-push/webhook_url`, mode 600 — not in git). HA side: trigger-based template sensors `/config/templates/truenas.yaml` (`sensor.truenas_{pool,pool_used,last_scrub,alerts,apps,disk_temp,load,last_report}`).
+- **Problems logic** in `/config/custom_templates/homelab.jinja` (macro), used by `/config/templates/homelab.yaml` → `sensor.home_lab_problems` (count + `problems` list), plus `sensor.services_up` (Uptime Kuma; unknown until that integration is added) and `sensor.updates_available`. Checks: pings, UniFi device states, disks > 85 %, NUC CPU > 95 °C, pool not ONLINE, scrub errors **> 1** (the one permanent error from 2026-06-20 is accepted), undismissed TrueNAS alerts ≥ WARNING, apps not RUNNING/STOPPED, NAS disks > 50 °C, TrueNAS silent > 20 min, Kuma monitors down.
+- `script.pause_ad_blocking` (filtering off on both AdGuards for 5 min, mode restart) replaces the dead button.
+
+**Bug found on the way:** the `#lights` pop-up's list had been rendering **empty** since round 2. auto-entities builds the card as `Object.assign({cards: <entities>}, card)`, so the `cards: []` added to its grid config overwrote the list. Removed it (the generator comment says why); lights list and the new lists verified.
+
+**Findings (not changed):**
+- **nuc8-1 CPU package 89–93 °C** under ~40 % CPU (nuc8-2: 61–75 °C). Throttling starts near 100 °C — fan/dust/thermal paste worth checking.
+- **ps3netsrv** TrueNAS app stuck in DEPLOYING (container "starting") — being investigated separately.
+- **TrueNAS load ~20–40** on 8 cores at 22:30, mostly Plex Media Server (~375 % CPU) and the HAOS VM (~1 core).
+- Pool `newton` 85.8 % used (9.9 TB free); last scrub 2026-10-07.
+
+**Pending:** Uptime Kuma integration needs an API key from the user (flyctl isn't logged in here); the Services card and Kuma problem checks appear automatically once it's added.
+
 ## 2026-10-17 (HA: appliance cleaning reminders — washer + dishwasher)
 
 - New `input_datetime.washer_cleaned` and `input_datetime.dishwasher_cleaned` (YAML in `configuration.yaml`, next to the filter dates; backups `*.bak-20261017-cleaning`). Both started at 2026-10-17 because HA defaults date-only helpers to today; the user can hold the cards to set real dates.
