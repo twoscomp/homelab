@@ -3,6 +3,12 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-18 (HA: vacuum "Clean" with no rooms selected starts both vacuums again)
+
+**Problem:** the Vacuum view's **Clean** button (`python_script.clean_rooms`, `clean: true`) is meant to send both vacuums on a whole-home clean when no rooms are selected. That branch did nothing. At 09:31 CDT today the Roborock raised `vacuum.send_command … command=start` → `HomeAssistantError: Error while calling start`. The Roomba got `send_command start` with only `pmap_id`, reported error code 224 and stayed docked. The core Roborock integration has no raw `start` command, and the bundled test file (`test_clean_rooms.py`) asserted that broken call.
+
+**Fix:** in `/config/python_scripts/clean_rooms.py`, the no-selection branch now calls the **`vacuum.start` service** on `vacuum.goomba` and `vacuum.roborock_q7_max`. That's the same call "Release the Vacuums" uses, and it started both vacuums yesterday and at 09:42 today. Room-specific cleans (Roomba regions, Roborock `app_segment_clean`) are unchanged. The two full-clean tests now expect `vacuum.start`; all 12 pass. Ran `python_script.reload`, then a `clean: false` smoke call, which executes cleanly. Backups: `clean_rooms.py.bak-20261018`, `test_clean_rooms.py.bak-20261018`. (The script lives only on HAOS, not in this repo.)
+
 ## 2026-10-17 (Incident: TrueNAS NIC hang — NAS + Home Assistant offline 22:51–23:14)
 
 **What happened:** at **22:51:20** TrueNAS's onboard **Intel I219-V** (`enp0s31f6`, driver e1000e, firmware 0.21-4, kernel 6.12.105) began logging `Detected Hardware Unit Hang` every 2 s and never reset itself (614 lines, no `Reset adapter`). The NIC carries `br0`, so TrueNAS **and the HAOS VM** dropped off the LAN (no ARP). NUC NFS soft mounts timed out from 22:54:55, Syncthing to TrueNAS dropped 22:56. The system itself was alive — the user's **short power-button press** shut it down cleanly at 23:11; back on the network 23:14:31, middleware ready ~23:18.
