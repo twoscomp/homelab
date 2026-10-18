@@ -4,6 +4,9 @@ networks:
   default:
     name: smarthomeserver
     external: true
+  hostnet:
+    name: host
+    external: true
 
 services:
   heartbeat-pusher:
@@ -55,3 +58,25 @@ services:
       restart_policy:
         condition: on-failure
         delay: 5s
+
+  # Host stats for Home Assistant's Glances integration (Home Lab dashboard).
+  # One task per node on the host network: http://<node>:61208/api/4 (LAN only).
+  glances:
+    image: nicolargo/glances:4.5.7-full
+    environment:
+      - TZ=${TZ}
+      - GLANCES_OPT=-w --disable-webui --disable-plugin cloud,ports,wifi,irq,folders,raid,smart
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /etc/os-release:/etc/os-release:ro
+    networks:
+      - hostnet
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 160M
+      restart_policy:
+        condition: on-failure
+        delay: 10s
