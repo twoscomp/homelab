@@ -3,6 +3,20 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-17 (Incident: TrueNAS NIC hang — NAS + Home Assistant offline 22:51–23:14)
+
+**What happened:** at **22:51:20** TrueNAS's onboard **Intel I219-V** (`enp0s31f6`, driver e1000e, firmware 0.21-4, kernel 6.12.105) began logging `Detected Hardware Unit Hang` every 2 s and never reset itself (614 lines, no `Reset adapter`). The NIC carries `br0`, so TrueNAS **and the HAOS VM** dropped off the LAN (no ARP). NUC NFS soft mounts timed out from 22:54:55, Syncthing to TrueNAS dropped 22:56. The system itself was alive — the user's **short power-button press** shut it down cleanly at 23:11; back on the network 23:14:31, middleware ready ~23:18.
+
+**Not caused by** the ps3netsrv stop (22:45; the 22:50 TrueNAS→HA push still succeeded). Load was high earlier (Plex ~375 % CPU, load 20–40), and this e1000e hang is the well-known I219 TSO/GSO-offload bug under heavy transmit load.
+
+**It has happened before — unnoticed:** kern.log.2 has the same hang on **2026-03-31, 04-04, 04-11, 04-15 and 04-19** (14k lines on Apr 19); nothing in kern.log.1 (Apr 19 → Oct 8). Never in this log until now. Offloads are all still **on** (`tso`, `gso`, `gro`, rx/tx checksumming). No init/shutdown scripts exist.
+
+**Recovery checks (all OK):** pool `newton` ONLINE (only the known CORRUPT_DATA entry); HA VM running and HA API 200; NUC NFS volume readable from inside radarr; all Swarm services at full replicas. **wallabag** and **gdrive-sync** didn't auto-start after the clean shutdown (no start job, empty container lists) — started with `app.start`, both RUNNING by 23:22. Kuma's Calibre/Media monitors cleared by 23:22; Home Lab problems 0.
+
+**Logs as dlin (no sudo):** `/var/log/*` is root:adm, but the middleware can fetch them — `midclt call core.download filesystem.get '["/var/log/kern.log"]' kern.log` returns a `/_download/...` URL to `curl` from `http://127.0.0.1` on TrueNAS.
+
+**Proposed fix (awaiting the user):** disable segmentation offload on the I219 at boot — TrueNAS Init/Shutdown Script, POSTINIT command `ethtool -K enp0s31f6 tso off gso off` (needs root to apply now; persists across updates). Fallback if hangs continue: also `gro off`, or a PCIe/USB NIC on a different chipset.
+
 ## 2026-10-17 (HA: Home Lab dashboard rebuilt — servers, NAS, network, DNS, updates, media)
 
 The old Home Lab view was two 5-row AdGuard lists plus a **dead "Pause Filtering" button** (`input_button.pause_filtering`; nothing referenced it after the HAOS migration, last pressed 2026-04-24). Rebuilt as a sections view in `tools/ha_home_dashboard.py` (no longer copied from the old dashboard): **Status** (problem summary, Uptime Kuma services), **Servers** (nuc8-1, nuc8-2, TrueNAS, HA VM), **Network** (internet, gateway, Wi-Fi devices, switch/APs; AdGuard both instances in one card, tap = pause 5 min), **Updates** (pending `update.*`, Watchman broken references), **Media** (Plex streams via Tautulli, who's watching what). Checked at 360 px. Home's "Right now" strip gets a red pill only when `sensor.home_lab_problems` > 0.
