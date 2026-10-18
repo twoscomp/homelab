@@ -24,7 +24,7 @@ The old Home Lab view was two 5-row AdGuard lists plus a **dead "Pause Filtering
 - **TrueNAS load ~20–40** on 8 cores at 22:30, mostly Plex Media Server (~375 % CPU) and the HAOS VM (~1 core).
 - Pool `newton` 85.8 % used (9.9 TB free); last scrub 2026-10-07.
 
-**Pending:** Uptime Kuma integration needs an API key from the user (flyctl isn't logged in here); the Services card and Kuma problem checks appear automatically once it's added.
+**Uptime Kuma integration** added the same night with a key the user created (`~/.config/uptime-kuma/ha-api-key` on the workstation, mode 600, never printed): 26 monitors → `sensor.services_up` 26/26, Services card and the down-monitor check are live (251 Kuma entities: status, response time, uptime %, cert expiry per monitor).
 
 ## 2026-10-17 (HA: appliance cleaning reminders — washer + dishwasher)
 
