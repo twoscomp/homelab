@@ -20,7 +20,7 @@ The old Home Lab view was two 5-row AdGuard lists plus a **dead "Pause Filtering
 
 **Findings (not changed):**
 - **nuc8-1 CPU package 89–93 °C** under ~40 % CPU (nuc8-2: 61–75 °C). Throttling starts near 100 °C — fan/dust/thermal paste worth checking.
-- **ps3netsrv** TrueNAS app stuck in DEPLOYING (container "starting") — being investigated separately.
+- **ps3netsrv — STOPPED (user-approved).** It wasn't stuck: the bulk app upgrade at 00:43 (job 65712, 1.4.4→1.4.5) pulled `shawly/ps3netsrv:latest` = upstream v2.0.0, which added a HEALTHCHECK that fails when `/games` has none of webMAN's folder names (`PS3ISO`, `PS2ISO`, `PSXISO`…); `/run/ps3netsrv/check.status` = `no-folders`. TrueNAS maps any non-healthy container to STARTING → app DEPLOYING forever. The server itself listened on :38008 but had nothing webMAN could serve (`games/ps3` empty since Sep 17; the user wanted it down on Sep 24). Stopped with `midclt call --job app.stop '"ps3netsrv"'`. If it's revived: create `PSXISO`/`PS2ISO` (relative symlinks) or set `PS3NETSRV_SKIP_CHECKS=true`, and pin a version tag instead of `:latest`.
 - **TrueNAS load ~20–40** on 8 cores at 22:30, mostly Plex Media Server (~375 % CPU) and the HAOS VM (~1 core).
 - Pool `newton` 85.8 % used (9.9 TB free); last scrub 2026-10-07.
 
