@@ -76,6 +76,13 @@ After every `docker-compose -f media.yaml config | docker stack deploy -c - medi
 - ZFS scrub covers data integrity (supersedes SMART long test — long test removed).
 - SMART short test kept (Wednesday 3 AM Central) — 2 min, catches early electrical/mechanical failure.
 
+### Patch-drift checks (from the 2026-10-26 review)
+
+- **After any Ubuntu release upgrade, check `/etc/apt/sources.list.d/` for `*.distUpgrade` files.** The upgrader disables third-party repos. The Docker repo sat on `jammy` for months, which froze the engine and runc. `apt-cache policy docker-ce` should show a `~noble` candidate.
+- Floating tags (`:latest`) in swarm specs are pinned to a digest at deploy time and never refresh on their own. `docker service update --image <repo:tag> <svc>` re-resolves them. Watch for upstreams dropping a tag (recyclarr dropped `:latest` → "No such image" task rejections).
+- An engine upgrade restarts every container on the node, and these 4 GB NUCs crawl under the I/O for ~10 min. Services are pinned per node (`deploy-nuc`/`deploy-nuc2`), so don't drain before a reboot; nothing can migrate anyway.
+- TrueNAS app upgrades: `midclt call -j app.upgrade <app> '{"app_version":"latest"}'`, one at a time, each wrapped in `timeout 300`. Check `sensor.tautulli_watching` in HA before upgrading Plex.
+
 ## Infra Troubleshooting — Standing Instruction
 
 Any time you troubleshoot a homelab/infra problem, do both of the following before ending the session:

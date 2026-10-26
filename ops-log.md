@@ -3,6 +3,19 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-26 (Security ops review: runtime/edge patching; HA app removed; Android Auto way-home automation)
+
+Full review in [`ops-review-1026.md`](./ops-review-1026.md). Changes made today:
+
+- **Docker engine was frozen since the 24.04 upgrade.** `docker.list` had been renamed `.distUpgrade` and still pointed at `jammy`, so Docker/containerd/runc stayed at 28.3.3 / 1.7.27 / 1.2.5. Both nodes now use the `noble` repo, and `apt full-upgrade` brought them to **29.9.2 / 2.4.2 / runc 1.5.2** (nuc8-2 93 pkgs, nuc8-1 88). The engine restart restarts every container on the node. On nuc8-2 that caused about 10 min of 80%+ iowait while dpkg ran; let it finish. Afterwards: all services full, overlay IPs present, CrowdSec bouncer reconnected, public hosts OK.
+- **Reboots still pending (kernel 6.8.0-124 → 147, 18 weeks uptime).** The auto-mode classifier blocks `systemctl reboot`, so the user has to run it.
+- **NPM 2.11.3 → 2.16.0** (`tier1.yaml`). Tested on a copy of `/data` first; the S6 ownership hook still works. Backup is in `~/backups/npm-2.11.3-20261026` on nuc8-1. Moved the orphaned `proxy_host/4.conf.orphaned-20261016` and `64.conf` there too. 64 (tracearr) was deleted in the DB but still loaded by nginx.
+- **18 floating-tag swarm images re-pulled** (`docker service update --image <ref>` re-resolves the digest). **recyclarr** broke because upstream dropped `:latest` ("No such image" rejections); it's pinned to `:8` in `media.yaml`.
+- **TrueNAS apps:** 14 upgraded. Plex and Jellyfin were deferred because a stream was active. `midclt call -j app.upgrade <app> '{"app_version":"latest"}'` works; adding `snapshot_hostpath` made every call fail, and one batch loop hung with no job running, so wrap each call in `timeout 300`.
+- **HA Core 2026.10.2 → 2026.10.4** (`ha core update --backup`).
+- **HA migration cleanup (subagent):** deleted TrueNAS app `home-assistant` and `.vm-display-password`. Kept the pg dumps, the old config dir (642 MB) and the HAOS image (1.1 GB) for the user to decide. Plan Phase 4 marked done (`d2598e4`).
+- **New HA automation "Android Auto - Notify when on the way home"** (id 1793050000001, UI `automations.yaml`, backup `.bak-20261026-aa`). The user thought one existed; it never did (the Android Auto sensors only drove the deleted MyQ garage automations). Phones expose no nav destination, so "headed home" is inferred: the drive must start while away, and it fires once the driver is 1 km closer than the drive's farthest point and still at least 1.5 km out. It notifies the person at home once per drive, in both directions, and gives up after 3 h, on Android Auto disconnect, or on arrival.
+
 ## 2026-10-26 (cloudflared upgraded to 2026.10.3 — eMudhra CA distrust bulletin)
 
 **Why:** Cloudflare bulletin today ("[Action Required] Upgrade your Cloudflare Tunnel to version 2026.10.2 or later"): eight eMudhra (emSign) intermediate CAs have weak private keys, and cloudflared < 2026.10.2 still trusts them. Our only connector (`security_cloudflared`, nuc8-1) was on **2026.3.0** — `:latest` with `--no-autoupdate`, last pulled in March.
