@@ -3,6 +3,13 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-26 (*arr apps demanded login on the LAN after the image refresh — TrustedNetworks)
+
+**Symptom:** Sonarr/Radarr/Prowlarr/Lidarr (`AuthenticationRequired=DisabledForLocalAddresses`) started redirecting LAN users to `/login` right after today's image refresh (~13:00), before the NPM host-mode change.
+**Cause:** the new versions (Sonarr 4.0.20, Radarr 6.4.4, Prowlarr 2.6.5, Lidarr 3.1.6) added `<TrustedNetworks>` (plus `<AllowedHosts>`) to `config.xml`. With it empty, a request carrying `X-Forwarded-For` from an untrusted proxy counts as remote. Tested from an overlay container: no XFF → 200; XFF 10.0.0.2, 192.168.0.99 or a public IP → 302.
+**Fix:** `<TrustedNetworks>10.0.1.0/24</TrustedNetworks>` (the overlay NPM proxies from) in all four, then a container restart. Backups: `/config/config.xml.bak-20261026` in each. Verified: XFF from the LAN → 200; XFF 8.8.8.8 / the WAN IP → 302 (login is still enforced for non-local clients).
+**Not regressions:** Grafana (TeslaMate) has `GF_AUTH_ANONYMOUS_ENABLED=false` in both the old and new image, so it always needed a login. SABnzbd's `sabnzbd.ini` is unchanged since Jul 30 (credentials set, `inet_exposure = 0`), so it always needed a login.
+
 ## 2026-10-26 (SEV1: WAN 80/443 → NPM bypassed the "LAN" access list; fixed with host-mode publish + direct-path guard)
 
 **Found:** Shodan showed 80/443 (openresty) and 32400 open on the WAN IP. The router forwards WAN 80/443 to NPM, which serves `plex.`/`jellyfin.whatasave.space` (DNS-only A records; Cloudflare's free tier prohibits video). NPM published 80/81/443 through the **swarm ingress mesh, which SNATs every client to 10.0.0.2**, LAN or WAN. Access list 1 "LAN" allowed `10.0.0.0/24`, so anyone on the internet who sent `Host: <x>.swarm.localdomain` to the WAN IP got past the LAN gate: TeslaMate (no auth: location history), Grafana, qBittorrent, SABnzbd, the *arr apps. CrowdSec whitelisted all of it as private. The tunnel path was never affected (10.0.0.0/24 isn't in `set_real_ip_from`). Scanners were hitting the WAN IP directly all day (e.g. a `/.env` probe at 15:14).

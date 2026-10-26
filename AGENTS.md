@@ -90,6 +90,10 @@ After every `docker-compose -f media.yaml config | docker stack deploy -c - medi
 - Testing the WAN path from the LAN is misleading: the router's hairpin NAT makes you 192.168.0.1 (trusted). Use an external vantage point (e.g. Uptime Kuma on fly.io shows up with its real IP in the proxy-host logs).
 - Changing an access list by hand means editing `access_list_client` in the DB **and** the rendered `proxy_host/*.conf`. Better: edit it in the NPM UI (port 81), which re-renders.
 
+### *arr apps behind NPM
+
+- Sonarr/Radarr/Prowlarr/Lidarr (late-2026 versions) only honour `X-Forwarded-For` from `<TrustedNetworks>` in `config.xml`. It must be `10.0.1.0/24` (the overlay NPM proxies from), or "Disabled for Local Addresses" asks LAN users to log in. Recheck after a fresh install or a config reset.
+
 ## Infra Troubleshooting — Standing Instruction
 
 Any time you troubleshoot a homelab/infra problem, do both of the following before ending the session:
