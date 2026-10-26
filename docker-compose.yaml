@@ -36,7 +36,8 @@ services:
       - type: bind
         source: /servarrData/nginx-package-manager/data/tesla-proxy
         target: /share/nginx
-      # Path to tesla_http_proxy directory inside /config on Home Assistant instance. Change according to your HA setup. Path must exist or this container won't start
+      # Upstream expects HA's /config/tesla_http_proxy here. HA runs as a HAOS VM (192.168.0.67) since 2026-10-16, so this is just a
+      # local dir on nuc8-1 (holds the proxy's selfsigned.pem); it isn't shared with HA. Path must exist or this container won't start
       - type: bind
         source: /servarrData/tesla-http-proxy/homeassistant
         target: /share/home-assistant

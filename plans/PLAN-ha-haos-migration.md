@@ -306,4 +306,9 @@ install on any Postgres.
 - [x] Phase 1 — Rehearse conversion — **PASS 28/28, 2026-09-24**. Leftovers: delete app `ha-migration-rehearsal` (STOPPED); scratch `rehearsal/pgdata` (~3.5 GB, owned by uid 999) needs a root-capable cleanup
 - [x] Phase 2 — Build VM — done 2026-09-24: VM 5 `haos`, 192.168.0.67, stopped, SkyConnect attached, autostart off
 - [x] Phase 3 — Cutover — **done 2026-10-16**, HA outage 22:37–23:39 (see below)
-- [ ] Phase 4 — After cutover
+- [x] Phase 4 — After cutover — **done 2026-10-26**: HAOS healthy (Core 2026.10.4, ZHA loaded, daily backups in
+      `/mnt/newton/backups/haos`); app `home-assistant` (and its Postgres) deleted, verified gone from `app.query`;
+      stale `.vm-display-password` removed. The `ha-pg-20260924.dump` / `ha-pg-20261016.dump` archives stay in
+      `/mnt/newton/appdata/ha-migration/`. Kept for the user to decide: old config dir
+      `/mnt/newton/appdata/homeassistant` (642 MB) and the HAOS image `ha-migration/haos/` (1.1 GB).
+      Rollback to the old app is no longer possible; see Rollback for rebuilding from the dump.
