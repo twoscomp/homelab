@@ -9,7 +9,7 @@ None.
 
 ### SEV2 — High
 1. **Container runtime frozen since the OS upgrade (FIXED).** `/etc/apt/sources.list.d/docker.list` was renamed `.distUpgrade` during the 24.04 upgrade and still pointed at `jammy`. Both nodes are now on the `noble` repo: Docker **29.9.2**, containerd **2.4.2**, runc **1.5.2**. All services came back at full replicas with overlay IPs.
-2. **Kernels not booted: 18 weeks uptime, running 6.8.0-124 with 6.8.0-147 installed (OPEN — needs user).** unattended-upgrades is working, but kernel and libc fixes don't apply until a reboot. The auto-mode classifier blocked `systemctl reboot`, so the user has to run it or allow it. Order: nuc8-2 first, then nuc8-1. Services are pinned per node, so a reboot means a few minutes of downtime for that node's services; nothing migrates.
+2. **Kernels not booted: 18 weeks uptime, running 6.8.0-124 with 6.8.0-147 installed (FIXED — rolling reboots, nuc8-2 then nuc8-1).** unattended-upgrades is working, but kernel and libc fixes don't apply until a reboot. The auto-mode classifier blocked `systemctl reboot`, so the user has to run it or allow it. Order: nuc8-2 first, then nuc8-1. Services are pinned per node, so a reboot means a few minutes of downtime for that node's services; nothing migrates.
 3. **NPM, the internet front door, was 2.11.3 from Oct 2024 (FIXED → 2.16.0).** Tested first on a copy of `/data` (migrations clean, `nginx -t` ok, the S6 ownership hook still works). Backup: `~/backups/npm-2.11.3-20261026` on nuc8-1.
 4. **cloudflared 2026.3.0 trusted the compromised eMudhra intermediates (FIXED → 2026.10.3).** It's pinned now, with start-first updates.
 5. **Home Assistant is internet-exposed with no MFA and no brute-force banning (OPEN).** Neither person has TOTP enrolled. `.storage/http` has `ip_ban_enabled: true` but `login_attempts_threshold: -1`, which means it never bans. `trusted_proxies` is the whole `192.168.0.0/24` rather than the NPM nodes.
@@ -50,7 +50,7 @@ None.
 ### Prioritized Action List
 | Priority | Item | Effort | Status |
 |---|---|---|---|
-| P1 | Reboot nuc8-2, then nuc8-1 (kernel 6.8.0-147) | 15 min | user |
+| P1 | Reboot nuc8-2, then nuc8-1 (kernel 6.8.0-147) | 15 min | ✅ |
 | P1 | Enroll HA TOTP for both users; set `login_attempts_threshold`, narrow `trusted_proxies` | 20 min | open |
 | P2 | CrowdSec remediation for tunnel traffic (CF Worker bouncer or NPM Lua bouncer) | 1–2 h | open |
 | P2 | Mosquitto auth (TeslaMate + HA credentials) | 30 min | open |
