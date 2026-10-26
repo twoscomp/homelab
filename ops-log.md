@@ -3,6 +3,16 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-26 (cloudflared upgraded to 2026.10.3 — eMudhra CA distrust bulletin)
+
+**Why:** Cloudflare bulletin today ("[Action Required] Upgrade your Cloudflare Tunnel to version 2026.10.2 or later"): eight eMudhra (emSign) intermediate CAs have weak private keys, and cloudflared < 2026.10.2 still trusts them. Our only connector (`security_cloudflared`, nuc8-1) was on **2026.3.0** — `:latest` with `--no-autoupdate`, last pulled in March.
+
+**Change:** `security.yaml` now pins `cloudflare/cloudflared:2026.10.3` (no more `:latest` drift) and sets `update_config.order: start-first`, so swarm registers the new connector before the old one drains. That's the bulletin's "temporary replica" handoff, and every later upgrade gets it too. Applied with `docker service update --image … --update-order start-first security_cloudflared` (same spec as the yaml; the rest of the security stack wasn't touched). The new task registered 4 QUIC connections (dfw05/06/16) within 3 s; ha/overseerr/tesla answer externally (200/307/403 — tesla's 403 is the NPM access list).
+
+**HTTPS-origin caveat doesn't apply:** every ingress rule points at `http://tier1_nginx-proxy-manager:80` (plain HTTP).
+
+**Next upgrade:** bump the tag in `security.yaml` and stack-deploy, or use the same `service update`.
+
 ## 2026-10-18 (HA: vacuum "Clean" with no rooms selected starts both vacuums again)
 
 **Problem:** the Vacuum view's **Clean** button (`python_script.clean_rooms`, `clean: true`) is meant to send both vacuums on a whole-home clean when no rooms are selected. That branch did nothing. At 09:31 CDT today the Roborock raised `vacuum.send_command … command=start` → `HomeAssistantError: Error while calling start`. The Roomba got `send_command start` with only `pmap_id`, reported error code 224 and stayed docked. The core Roborock integration has no raw `start` command, and the bundled test file (`test_clean_rooms.py`) asserted that broken call.
