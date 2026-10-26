@@ -83,6 +83,13 @@ After every `docker-compose -f media.yaml config | docker stack deploy -c - medi
 - An engine upgrade restarts every container on the node, and these 4 GB NUCs crawl under the I/O for ~10 min. Services are pinned per node (`deploy-nuc`/`deploy-nuc2`), so don't drain before a reboot; nothing can migrate anyway.
 - TrueNAS app upgrades: `midclt call -j app.upgrade <app> '{"app_version":"latest"}'`, one at a time, each wrapped in `timeout 300`. Check `sensor.tautulli_watching` in HA before upgrading Plex.
 
+### NPM / edge gotchas
+
+- **Never publish NPM through the swarm ingress mesh.** Ingress SNATs every client to 10.0.0.x, so access lists can't tell LAN from WAN. NPM uses `mode: host` ports on nuc8-1; see the SEV1 entry in `ops-log.md` 2026-10-26.
+- `data/nginx/custom/http_top.conf` + the `if ($npm_block_direct)` line in `custom/server_proxy.conf` make every host tunnel/LAN-only, except `plex.`/`jellyfin.whatasave.space`. To expose another host directly, add it to the `map $server_name` block.
+- Testing the WAN path from the LAN is misleading: the router's hairpin NAT makes you 192.168.0.1 (trusted). Use an external vantage point (e.g. Uptime Kuma on fly.io shows up with its real IP in the proxy-host logs).
+- Changing an access list by hand means editing `access_list_client` in the DB **and** the rendered `proxy_host/*.conf`. Better: edit it in the NPM UI (port 81), which re-renders.
+
 ## Infra Troubleshooting — Standing Instruction
 
 Any time you troubleshoot a homelab/infra problem, do both of the following before ending the session:

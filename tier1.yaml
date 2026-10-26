@@ -16,10 +16,14 @@ services:
     environment:
       TZ: America/Chicago
       S6_STAGE2_HOOK: truncate -s 0 /etc/s6-overlay/s6-rc.d/prepare/30-ownership.sh
+    # mode: host (not the ingress routing mesh): ingress SNATs every client to 10.0.0.x, which made
+    # WAN-forwarded traffic indistinguishable from LAN and bypassed the "LAN" access list (SEV1,
+    # ops-review-1026.md). Host mode keeps real client IPs; NPM is pinned to the manager (nuc8-1 =
+    # 192.168.0.101, where LAN DNS points *.swarm.localdomain). Direct-path guard: data/nginx/custom/http_top.conf.
     ports:
-      - '80:80'
-      - '81:81'
-      - '443:443'
+      - {target: 80,  published: 80,  protocol: tcp, mode: host}
+      - {target: 443, published: 443, protocol: tcp, mode: host}
+      - {target: 81,  published: 81,  protocol: tcp, mode: host}
     volumes:
       - ${LOCALDATA}/nginx-package-manager/data:/data
       - ${LOCALDATA}/nginx-package-manager/letsencrypt:/etc/letsencrypt

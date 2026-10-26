@@ -3,6 +3,22 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-26 (SEV1: WAN 80/443 → NPM bypassed the "LAN" access list; fixed with host-mode publish + direct-path guard)
+
+**Found:** Shodan showed 80/443 (openresty) and 32400 open on the WAN IP. The router forwards WAN 80/443 to NPM, which serves `plex.`/`jellyfin.whatasave.space` (DNS-only A records; Cloudflare's free tier prohibits video). NPM published 80/81/443 through the **swarm ingress mesh, which SNATs every client to 10.0.0.2**, LAN or WAN. Access list 1 "LAN" allowed `10.0.0.0/24`, so anyone on the internet who sent `Host: <x>.swarm.localdomain` to the WAN IP got past the LAN gate: TeslaMate (no auth: location history), Grafana, qBittorrent, SABnzbd, the *arr apps. CrowdSec whitelisted all of it as private. The tunnel path was never affected (10.0.0.0/24 isn't in `set_real_ip_from`). Scanners were hitting the WAN IP directly all day (e.g. a `/.env` probe at 15:14).
+
+**Fix (applied 15:35 CDT after a read-only agent review, verdict GO-WITH-CHANGES):** backups are in `~/backups/npm-hostmode-20261026` on nuc8-1.
+1. NPM ports are now `mode: host` (`tier1.yaml`, long syntax), so nginx sees real client IPs. NPM is pinned to nuc8-1 (.101), which is where LAN DNS sends `*.swarm.localdomain`. nuc8-2 no longer listens on 80/81/443.
+2. Access list 1: `10.0.0.0/24` → `172.16.0.0/12` (local docker-proxy/gwbridge, i.e. host-local and IPv6 callers). Changed in the DB **and** with `sed` in the 15 rendered `proxy_host/*.conf` (NPM doesn't re-render on start).
+3. **Direct-path guard:** a new `data/nginx/custom/http_top.conf` (`geo $realip_remote_addr` → trusted peer = 127/8, 10.0.1.0/24 tunnel, 192.168/16 LAN, 172.16/12; `map $server_name` → only plex/jellyfin allowed on the direct path), plus `if ($npm_block_direct) { return 444; }` appended to `custom/server_proxy.conf`. Every other host is tunnel/LAN-only, even though 443 is forwarded. **If NPM ever goes back to ingress mode, remove that `if` line**, or every non-exempt host returns 444.
+4. CrowdSec bouncer: `DOCKER-USER` added to `iptables_chains` (published-port traffic goes through FORWARD, not INPUT), plus the drop-in `crowdsec-firewall-bouncer.service.d/docker.conf` (`After=docker.service`) so the chain exists when the bouncer starts.
+
+**Verified:** LAN → internal hosts OK (clients now logged as 192.168.0.x). Tunnel hosts unchanged. Uptime Kuma (fly.io) reaches plex/jellyfin directly and is logged with its **real public IP** (79.127.234.229), which proves WAN clients aren't SNATed any more. `nginx -t` clean. Bouncer rules are in DOCKER-USER (v4 + v6). Note: hairpin tests from the LAN to the WAN IP arrive as **192.168.0.1** (router hairpin NAT), so they count as LAN; test the guard from a truly external host. `overseerr` over direct HTTPS returning 000 is expected (that host has no cert; the tunnel uses HTTP).
+
+**Rollback** (it re-opens the bypass if the WAN forward is on): `docker service update --publish-rm 80 --publish-rm 81 --publish-rm 443 --publish-add published=80,target=80 …` (ingress), restore the DB, `proxy_host.tgz` and `server_proxy.conf` from the backup dir, delete `custom/http_top.conf`, restore the bouncer yaml.
+
+**Also noted:** Plex/Jellyfin certs (38, 52) renew by HTTP-01, so WAN 80 has to stay forwarded (the guard limits it to those hosts and ACME). Switch them to Cloudflare DNS-01 to close 80. Cert 50 looks like an unused jellyfin duplicate. Port 81 (NPM admin) is still published on all of nuc8-1's addresses; it should never be forwarded. Stray `sed*` temp files in `data/nginx/default_host/` are harmless.
+
 ## 2026-10-26 (Security ops review: runtime/edge patching; HA app removed; Android Auto way-home automation)
 
 Full review in [`ops-review-1026.md`](./ops-review-1026.md). Changes made today:
