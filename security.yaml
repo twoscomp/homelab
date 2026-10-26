@@ -44,7 +44,8 @@ secrets:
 
 services:
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    # Pinned: >= 2026.10.2 required (eMudhra/emSign intermediate CA distrust, CF bulletin 2026-10-26)
+    image: cloudflare/cloudflared:2026.10.3
     command: tunnel --no-autoupdate run
     environment:
       - TUNNEL_TOKEN_FILE=/run/secrets/cloudflare_tunnel_token
@@ -56,6 +57,9 @@ services:
       placement:
         constraints:
           - node.role == manager
+      # start-first: new connector registers before the old one drains, so upgrades don't drop the tunnel
+      update_config:
+        order: start-first
       restart_policy:
         condition: any
         delay: 30s
