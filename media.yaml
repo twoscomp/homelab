@@ -166,7 +166,7 @@ services:
 
   recyclarr:
     <<: *deploy-nuc
-    image: ghcr.io/recyclarr/recyclarr
+    image: ghcr.io/recyclarr/recyclarr:8  # upstream dropped :latest; major tag tracks v8
     container_name: recyclarr
     init: true
     user: 568:1001

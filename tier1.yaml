@@ -11,7 +11,7 @@ networks:
 
 services:
   nginx-proxy-manager:
-    image: 'jc21/nginx-proxy-manager:2.11.3'
+    image: 'jc21/nginx-proxy-manager:2.16.0'
     restart: unless-stopped
     environment:
       TZ: America/Chicago
