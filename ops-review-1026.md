@@ -5,7 +5,9 @@
 Prompted by the Cloudflare cloudflared bulletin (eMudhra CA distrust) and the recent run of breaches. Nothing is actively compromised: no open WAN ports, everything external goes through the tunnel, and CrowdSec sees only routine scanner noise (http-probing / sensitive-files from cloud IPs). The real problem was **patch drift on the parts that matter most**. The Docker apt repo had been silently disabled since the 22.04→24.04 upgrade, which froze Docker/containerd/runc at 28.3.3 / 1.7.27 / 1.2.5 (before the Nov 2025 runc container-escape fixes). The internet-facing reverse proxy (NPM) was a two-year-old 2.11.3. cloudflared was 2026.3.0. Both NUCs have run **18 weeks without a reboot** with eight newer kernels staged. Today's session fixed everything except the reboots, which need the user. What remains is mostly hardening: HA login protection, CrowdSec remediation for tunnel traffic, Mosquitto auth, SSH password auth, and TrueNAS service sprawl.
 
 ### SEV1 — Critical
-None.
+1. **The router forwarded WAN 80/443 straight to NPM, and NPM's "LAN" access list couldn't tell the internet from the LAN (MITIGATED — the user disabled the port forward 2026-10-26 ~15:15 CDT; hardening pending review).** Shodan listed 80/443 (openresty) and 32400 (Plex) open on the WAN IP. NPM's fallback logs (`fallback_access.log`, `fallback_http_access.log` on 2.16) show scanners hitting `Host: <WAN IP>`; the last one was a `/.env` probe at 15:14. Swarm ingress (routing mesh) SNATs **every** connection, LAN or WAN, to `10.0.0.2`, and access list 1 "LAN" allows `10.0.0.0/24`. So anyone on the internet who sent `Host: <name>.swarm.localdomain` to the WAN IP got past the LAN gate: TeslaMate (no auth, full location history), Grafana, qBittorrent, SABnzbd, the *arr apps. Their only protection was their own logins and hostnames that aren't published anywhere. CrowdSec couldn't see these clients either (all private 10.0.0.2, so whitelisted). The tunnel path isn't affected; `set_real_ip_from` doesn't trust 10.0.0.0/24, so the header can't be spoofed.
+   - **Fix A (done by user):** WAN→80/443 port forward removed in UniFi. 32400 (Plex remote access) is still forwarded.
+   - **Fix B (defense in depth, under agent review):** publish NPM's ports in `mode: host` so real client IPs survive (LAN DNS already points `*.swarm.localdomain` at nuc8-1/.101, where NPM is pinned). Replace `10.0.0.0/24` with the local Docker bridge range in access list 1, and add `DOCKER-USER` to the bouncer's `iptables_chains` so CrowdSec bans apply to published ports.
 
 ### SEV2 — High
 1. **Container runtime frozen since the OS upgrade (FIXED).** `/etc/apt/sources.list.d/docker.list` was renamed `.distUpgrade` during the 24.04 upgrade and still pointed at `jammy`. Both nodes are now on the `noble` repo: Docker **29.9.2**, containerd **2.4.2**, runc **1.5.2**. All services came back at full replicas with overlay IPs.
@@ -15,7 +17,7 @@ None.
 5. **Home Assistant is internet-exposed with no MFA and no brute-force banning (OPEN).** Neither person has TOTP enrolled. `.storage/http` has `ip_ban_enabled: true` but `login_attempts_threshold: -1`, which means it never bans. `trusted_proxies` is the whole `192.168.0.0/24` rather than the NPM nodes.
    - Fix: each user enrolls TOTP (Profile → Security → Multi-factor authentication modules).
    - Then set the threshold to ~10 and narrow `trusted_proxies` to 192.168.0.101, 192.168.0.26 and the overlay range. This needs a Core restart.
-6. **CrowdSec detects but can't block internet attackers (OPEN).** Tunnel traffic arrives over cloudflared's outbound connection, so the iptables bouncer on nuc8-1 never sees attacker IPs. Detections (real IPs via `CF-Connecting-IP`) produce no remediation. Options:
+6. **CrowdSec detects but can't block tunnel attackers (WON'T FIX).** The user is satisfied with Cloudflare's edge protection for tunnel traffic. CrowdSec stays for anything exposed directly (see SEV1). Tunnel traffic arrives over cloudflared's outbound connection, so the iptables bouncer on nuc8-1 never sees attacker IPs. Detections (real IPs via `CF-Connecting-IP`) produce no remediation. Options:
    - CrowdSec's Cloudflare Worker bouncer. The old cloudflare-bouncer was dropped because of IP-list caps; the Worker variant doesn't use lists.
    - The OpenResty/Lua bouncer inside NPM.
 
@@ -50,9 +52,10 @@ None.
 ### Prioritized Action List
 | Priority | Item | Effort | Status |
 |---|---|---|---|
+| P0 | Close WAN 80/443 → NPM (SEV1) | 2 min | ✅ user |
+| P0 | NPM host-mode publish + LAN list fix + bouncer DOCKER-USER (SEV1 hardening) | 15 min | in review |
 | P1 | Reboot nuc8-2, then nuc8-1 (kernel 6.8.0-147) | 15 min | ✅ |
 | P1 | Enroll HA TOTP for both users; set `login_attempts_threshold`, narrow `trusted_proxies` | 20 min | open |
-| P2 | CrowdSec remediation for tunnel traffic (CF Worker bouncer or NPM Lua bouncer) | 1–2 h | open |
 | P2 | Mosquitto auth (TeslaMate + HA credentials) | 30 min | open |
 | P2 | SSH key-only on NUCs + TrueNAS | 15 min | open |
 | P3 | Plex + Jellyfin app upgrades (when no one is streaming) | 5 min | open |
