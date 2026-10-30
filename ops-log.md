@@ -3,6 +3,13 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-10-30 (Android Auto way-home automation: false "on the way home" alerts to Angie)
+
+**Symptom:** Angie got 3 "Daniel on the way home!" alerts today. Only one was a real trip home: 12:13 (10.9 mi out, home 12:42).
+**Cause:** the trigger was "1 km closer than the drive's farthest point", which is too loose. 10:14 was an errand drive that went toward home and stopped 1.4 mi out. 10:52 was the last ~1 km of the approach to a destination 12 mi away (the drive had peaked 12.9 mi out). Android Auto reconnect blips (10:21, 11:59→12:02) start a fresh run, so "once per drive" didn't stop the second alert.
+**Fix:** the margin is now 3 km (`d <= dmax - 3.0`; backup `automations.yaml.bak-20261030-aa`), and automations were reloaded. Replaying 14 days of history: both of today's false alerts are gone, every real trip home still notifies (7–27 min before arrival), and alerts arrive ~2–5 min later. Drives that start within ~4.5 km of home won't notify any more.
+**Open:** an AA reconnect partway home (e.g. a gas stop) after an alert could send a second one. A per-person cooldown (input_datetime) would fix that if it ever happens.
+
 ## 2026-10-26 (*arr apps demanded login on the LAN after the image refresh — TrustedNetworks)
 
 **Symptom:** Sonarr/Radarr/Prowlarr/Lidarr (`AuthenticationRequired=DisabledForLocalAddresses`) started redirecting LAN users to `/login` right after today's image refresh (~13:00), before the NPM host-mode change.
