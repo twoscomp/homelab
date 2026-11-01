@@ -3,6 +3,15 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-01 (HA: washer tub-clean count frozen — LG ThinQ terms of service)
+
+- **Symptom:** the Maintenance washer count stopped at 22. `sensor.washer` stayed `off` with `tubclean_count: null` after the end of the 10-29 wash (18:04 UTC).
+- **Cause:** `smartthinq_sensors` v0.43.0 (latest) kept getting LG `resultCode 9006` ("Please consider using the official API"), then `Invalid Credential`, every 5 min. LG had new terms of service waiting in the app; this happens after LG updates. The 10-18 → 10-26 washer outage probably had the same cause.
+- **Fix:** the user accepted the terms in the LG ThinQ app, then I reloaded the config entry `LGE Devices`. A reload before the terms were accepted didn't help. The washer now reads **23** (one wash ran during the outage).
+- The tub-clean automation (`int(-1) == 0`) and `sensor.maintenance_attention` (`int(0)`) both ignore `null`, so the outage didn't reset or inflate anything.
+- **Not done:** proposed a "LG ThinQ disconnected" phone alert (count missing 3 h → notify with a Reload action button). The permission classifier blocked it because it wasn't requested; it's waiting for the user's OK.
+- **Long-term option:** the core `lg_thinq` integration uses LG's official API with a personal access token from the user's LG account. It's unverified whether it exposes the tub-clean counter.
+
 ## 2026-10-30 (Android Auto way-home automation: false "on the way home" alerts to Angie)
 
 **Symptom:** Angie got 3 "Daniel on the way home!" alerts today. Only one was a real trip home: 12:13 (10.9 mi out, home 12:42).
