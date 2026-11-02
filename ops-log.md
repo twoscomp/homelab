@@ -3,6 +3,13 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-02 (HA: Holden's night window → 21:15, bright for reading)
+
+- **Follow-up, same day:** they read in his room until ~21:15, so night now starts at **21:15**.
+- AL `sunset_time` 21:15, `time_light` 2700 s, floor 60%: the lamp holds 90% until 20:30, then eases to 70% at 21:00 and 60% at 21:15, warming from 2750 K to 2000 K. It's still readable right up to the switch to red.
+- Updated the same four places as below. Checked the night flag at 21:14 / 21:15 / 08:59 / 09:00. Backups: `*.bak-20261102-holden2`.
+- **The day/night automation is still required:** Holden's zone has `autoreset_control_seconds` 1800, so without it AL would take the lamp back from the red night light after 30 minutes.
+
 ## 2026-11-02 (HA: Holden's night window 20:30 → 21:00)
 
 - At the user's request, moved the night window closer to Holden's ~21:30 bedtime. Night is now **21:00–09:00**: Adaptive Lighting off, and the remote's top button gives the red night light.
