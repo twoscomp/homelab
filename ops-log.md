@@ -3,6 +3,17 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-02 (HA: garbage disposal cleaning reminder, 30 days)
+
+- New maintenance item, at the user's request. Interval: **monthly deep clean** (the usual guidance; ice + coarse salt or baking soda + vinegar, scrub the baffle), with an optional weekly quick rinse that isn't tracked.
+- Wired the same way as the washer/dishwasher:
+  - `input_datetime.garbage_disposal_cleaned` (YAML in `configuration.yaml`). It starts at today, 2026-11-02, so it's first due 12-02; hold the card to set a real date.
+  - Added to `sensor.maintenance_attention` (`templates/maintenance.yaml`).
+  - Added to `automation.maintenance_phone_alerts` (`filters_due`): a notification on the due day, then Saturdays while overdue. A render forced to "due today" gave "Garbage disposal: clean today".
+  - "Garbage Disposal" card in Maintenance → Appliances on both dashboards. Tap = cleaned today, hold = set a date.
+- **Slip, fixed within a minute:** a sed `\x27` escape wrote a literal `x27` into the template, and `sensor.maintenance_attention` went unavailable until a re-edit. It now reads 3: HVAC filter 57 d overdue, plus the Roborock sensor and filter at 0 (pre-existing).
+- Backups: `*.bak-20261102-disposal`.
+
 ## 2026-11-02 (HA: deleted broken "Garage - Turn of Box Fan at Night")
 
 - At the user's request, deleted automation `1727662751484`. It had failed setup ("Unknown device") on every automation reload since the TP-Link Box Fan plug was removed on 10-17, and no `fan.box_fan` exists any more.
