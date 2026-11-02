@@ -3,6 +3,11 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-02 (HA: deleted broken "Garage - Turn of Box Fan at Night")
+
+- At the user's request, deleted automation `1727662751484`. It had failed setup ("Unknown device") on every automation reload since the TP-Link Box Fan plug was removed on 10-17, and no `fan.box_fan` exists any more.
+- Backup: `automations.yaml.bak-20261102-boxfan`.
+
 ## 2026-11-02 (HA: Holden's night window → 21:15, bright for reading)
 
 - **Follow-up, same day:** they read in his room until ~21:15, so night now starts at **21:15**.
@@ -53,7 +58,7 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - Backups: `*.bak-20261101-adaptive` (core.config_entries, core.entity_registry, both lovelace files, automations.yaml).
 - **Left alone:**
   - The empty YAML `adaptive_lighting:` → "default" instance (4 switches, no lights). The user didn't pick that cleanup.
-  - `Garage - Turn of Box Fan at Night` fails to set up (unknown device: the TP-Link box fan removed on 10-17). Pre-existing; should be deleted.
+  - `Garage - Turn of Box Fan at Night` fails to set up (unknown device: the TP-Link box fan removed on 10-17). Pre-existing; deleted 2026-11-02.
 
 ## 2026-11-01 (HA: washer tub-clean count frozen — LG ThinQ terms of service)
 
