@@ -3,6 +3,15 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-02 (HA: maintenance alerts to Angie too)
+
+- At the user's request, `automation.maintenance_phone_alerts` sends its **"Home maintenance"** notification (HVAC/R.O. filters, washer, dishwasher, garbage disposal) to Angie's Galaxy (`notify.mobile_app_sm_f741u1`) as well as Daniel's Pixel.
+  - Same tag `maintenance-filters`; tapping it opens `/home-dashboard/maintenance`, which isn't admin-only.
+  - Each notify has `continue_on_error` so one phone can't block the other.
+- "Temperature sensor needs a battery" alerts stay **Daniel-only** (tech upkeep; can fire any time 08:00–21:30).
+- Not test-sent to Angie's phone. The first real one is the next due day, or a Saturday while something is overdue (the HVAC filter is overdue now, so Saturday 11-07 at 09:00).
+- Backup: `automations.yaml.bak-20261102-angie`.
+
 ## 2026-11-02 (HA: garbage disposal cleaning reminder, 30 days)
 
 - New maintenance item, at the user's request. Interval: **monthly deep clean** (the usual guidance; ice + coarse salt or baking soda + vinegar, scrub the baffle), with an optional weekly quick rinse that isn't tracked.
