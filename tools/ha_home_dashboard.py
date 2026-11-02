@@ -152,6 +152,8 @@ pills = {
         when([{"condition": "numeric_state", "entity": "sensor.home_lab_problems", "above": 0}],
              chip("{% set p = state_attr('sensor.home_lab_problems', 'problems') or [] %}{{ p[0] if p | count == 1 else p | count ~ ' lab issues' }}",
                   "mdi:server-network", "red", nav(f"/{NEW}/homelab"))),
+        when([{"condition": "state", "entity": "input_boolean.guests_over", "state": "on"}],
+             chip("Guests over", "mdi:account-group", "purple", {"action": "more-info"}, entity="input_boolean.guests_over")),
         when([{"condition": "numeric_state", "entity": "sensor.maintenance_attention", "above": 0}],
              chip("{{ states('sensor.maintenance_attention') }}", "mdi:wrench", "red", nav(f"/{NEW}/maintenance"))),
     ],

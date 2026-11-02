@@ -3,6 +3,41 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-01 (HA: Adaptive Lighting refactor — clock-anchored curves, "Guests over" toggle)
+
+- **Why it felt off after DST:** four zones (master bedroom lamp, master toilet, office, guest lamp) followed the real sunset. That jumped from ~18:40 to 17:36 on the clock with today's DST change, so they dimmed an hour earlier; the office was at 3% by 21:00.
+- **AL 1.32.0 clamp quirk (found while simulating with AL's own `color_and_brightness.py`):** `min_/max_sunset_time` are built on the *UTC* date. In the evenings that UTC date is a day ahead of local time (UTC−5/−6), so the clamps get compared with the previous day's sunset. The common areas' 19:00–20:00 window was effectively a fixed 19:00 all year; the 20:00 cap never applied. **Use a fixed `sunset_time`/`sunrise_time`, not clamps.**
+- **Holden's room:** his ramp (fixed 21:00 sunset, 20:50 → 21:45) never ran, because AL is switched off at 20:30. The lamp stayed at 90% until the red night light took over.
+- **New settings** (options flow; every zone has a fixed `sunrise_time` and `sunset_time`, so DST no longer moves anything):
+
+  | Zone | Mode | Sunset / sunrise | Window / floor | Result |
+  |---|---|---|---|---|
+  | Common areas (kitchen, dining, living, game, master entry) | tanh | 20:30 / 07:00 | light 5400 s, dark 5400 s, floor 30% | 96% @19:00 → 81 @20:00 → 49 @21:00 → 33 @22:00 → 30%. Was 86 → 39 → 26 → 25: two hours into one steep drop |
+  | Master bedroom lamp, guest lamp | default | 19:30 / 07:00 | — | 100 @19:30 → 59 @21:00 → 39 @22:00 → 24 @23:00 → 14% @00:00 |
+  | Master toilet | default | 19:30 / 07:00 | floor 1% | 55 @21:00 → 16 @23:00 → 1% @01:00 |
+  | Office | tanh | 20:00 / 07:00 | — | 62 @20:00 → 43 @21:00 → 16 @22:00 → 4% @23:00 |
+  | Holden | linear | 20:30 / 08:00 | light 3600 s, dark 0, floor 35% | 90% @19:30 → 35% @20:30, the level of the 37% red night light |
+
+  Live `brightness_pct` matched the simulator to within 0.1% on every zone.
+- **"Guests over":**
+  - New `input_boolean.guests_over`. It raises the common-area floor to 55% via `adaptive_lighting.change_switch_settings`, then runs `adaptive_lighting.apply` (3 s) so the lights change right away. It also holds off midnight sleep mode.
+  - It turns itself off at the sleep-mode stop time (08:00) and is re-applied at startup.
+  - Tested live: kitchen 38% → 60% → 38%.
+  - On the dashboard: Admin tile next to the sleep toggle, plus a purple "Guests over" chip in Right now while it's on (also added to `tools/ha_home_dashboard.py`).
+- **Automations:**
+  - Sleep mode (3 automations) became one: `automation.adaptive_lighting_common_areas_sleep_mode_and_guests`.
+  - Holden's 2 day/night automations became one: `automation.holden_adaptive_lighting_day_night`, with a catch-up on HA start. Its 09:00/20:30 must stay in sync with `script.holden_light_toggle`.
+  - Deleted the two disabled legacy "Brightness - adjust (master toilet) brightness by time of day" automations.
+- **Renames:**
+  - `switch.adaptive_lighting_*bathroom_light` (which was the bedside lamp) → `*_master_bedroom`.
+  - The doubled guest IDs → `switch.adaptive_lighting_{,sleep_mode_,adapt_color_,adapt_brightness_}guest_bedroom`. Updated the guest-mode automation and both dashboards.
+  - Devices renamed to "Adaptive Lighting: Master Bedroom / Common Areas / Master Bathroom".
+  - AL `name` options are unchanged on purpose: the switch unique IDs come from them.
+- Backups: `*.bak-20261101-adaptive` (core.config_entries, core.entity_registry, both lovelace files, automations.yaml).
+- **Left alone:**
+  - The empty YAML `adaptive_lighting:` → "default" instance (4 switches, no lights). The user didn't pick that cleanup.
+  - `Garage - Turn of Box Fan at Night` fails to set up (unknown device: the TP-Link box fan removed on 10-17). Pre-existing; should be deleted.
+
 ## 2026-11-01 (HA: washer tub-clean count frozen — LG ThinQ terms of service)
 
 - **Symptom:** the Maintenance washer count stopped at 22. `sensor.washer` stayed `off` with `tubclean_count: null` after the end of the 10-29 wash (18:04 UTC).
