@@ -3,6 +3,16 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-02 (HA: Holden's night window 20:30 → 21:00)
+
+- At the user's request, moved the night window closer to Holden's ~21:30 bedtime. Night is now **21:00–09:00**: Adaptive Lighting off, and the remote's top button gives the red night light.
+- Changed in all four places:
+  - AL `sunset_time` 21:00, so the lamp eases from 90% to 35% between 20:00 and 21:00.
+  - `automation.holden_adaptive_lighting_day_night`: trigger and template.
+  - `script.holden_light_toggle`: the `night` variable and the description.
+  - The `Holden's Remote` description.
+- Checked the script's night flag at 20:59 / 21:00 / 08:59 / 09:00. Backups: `*.bak-20261102-holden`.
+
 ## 2026-11-01 (HA: Adaptive Lighting refactor — clock-anchored curves, "Guests over" toggle)
 
 - **Why it felt off after DST:** four zones (master bedroom lamp, master toilet, office, guest lamp) followed the real sunset. That jumped from ~18:40 to 17:36 on the clock with today's DST change, so they dimmed an hour earlier; the office was at 3% by 21:00.
@@ -26,7 +36,7 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
   - On the dashboard: Admin tile next to the sleep toggle, plus a purple "Guests over" chip in Right now while it's on (also added to `tools/ha_home_dashboard.py`).
 - **Automations:**
   - Sleep mode (3 automations) became one: `automation.adaptive_lighting_common_areas_sleep_mode_and_guests`.
-  - Holden's 2 day/night automations became one: `automation.holden_adaptive_lighting_day_night`, with a catch-up on HA start. Its 09:00/20:30 must stay in sync with `script.holden_light_toggle`.
+  - Holden's 2 day/night automations became one: `automation.holden_adaptive_lighting_day_night`, with a catch-up on HA start. Its 09:00/20:30 (now 21:00, see 2026-11-02) must stay in sync with `script.holden_light_toggle`.
   - Deleted the two disabled legacy "Brightness - adjust (master toilet) brightness by time of day" automations.
 - **Renames:**
   - `switch.adaptive_lighting_*bathroom_light` (which was the bedside lamp) → `*_master_bedroom`.
