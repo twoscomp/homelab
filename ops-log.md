@@ -3,6 +3,14 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-04 (HA: Holden's reading light — warmer floor 2000 K → 2700 K)
+
+- The user said the lamp is still too dim for bedtime reading and suspected the colour temperature. They were right: Holden's AL zone warmed to **2000 K** by 21:15, and Hue colour bulbs put out far fewer lumens at that end of the range. `prefer_rgb_color: true` made it worse, because AL drove the lamp with an approximate RGB colour (e.g. "4030 K" rendered peach, `255,207,167`) instead of the bulb's own white mode.
+- Changed two options on the Holden's Room entry (`01KFCS6FAS1ZA8BETZRMD81HZX`) via the options flow: `min_color_temp` 2000 → **2700**, `prefer_rgb_color` true → **false**. Diffed the stored options: nothing else changed. The lamp now reports `color_mode: color_temp` and matches AL.
+- New evening colour (brightness unchanged, 90% → 60%): 20:00 ≈ 3660 K, 20:30 ≈ 3300 K, 21:00 ≈ 2900 K, 21:15 2700 K, then the red night light. Mornings are a bit whiter too (09:00 ≈ 3480 K, was ≈ 2975 K).
+- If it's still too dim, the next lever is the brightness floor (`min_brightness` 60).
+- Backup: `core.config_entries.bak-20261104-holdenct`.
+
 ## 2026-11-02 (HA: maintenance alerts to Angie too)
 
 - At the user's request, `automation.maintenance_phone_alerts` sends its **"Home maintenance"** notification (HVAC/R.O. filters, washer, dishwasher, garbage disposal) to Angie's Galaxy (`notify.mobile_app_sm_f741u1`) as well as Daniel's Pixel.
