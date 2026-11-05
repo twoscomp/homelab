@@ -3,6 +3,14 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-05 (HA: Holden's remote — double tap for Brown Noise "only works on Dimmer")
+
+- The user reported that double-tapping for Brown Noise sometimes works only on Dimmer (Yuki), not on O (Lulu) or Brighter (Starlight).
+- The config is symmetric: any `*_double_press` goes to the same Brown Noise branch. The retained traces (11-04, 21:17–21:37) showed no failed double tap: Starlight and Lulu repeats were correctly ignored by the 20-minute guard, and one double tap at 21:17 started Brown Noise.
+- Working theory, not yet confirmed: a double tap slower than the ZHA quirk's ~300 ms window arrives as two `*_short_release` events. The first starts that button's story and the second is dropped (2 s mash guard, or the story is already playing), so it looks like the double tap failed.
+- A 15-minute live `zha_event` listener saw no presses (the user wasn't testing then).
+- **Raised trace retention** so the next real failure stays visible: `automation.holden_s_remote` `stored_traces: 100` (every zha_event from the remote creates ~3 runs, so the default 5 was about one press), `script.holden_hatch_story` 30. `ha core check` OK; automation + script reload. Backups: `*.bak-20261105-traces`.
+
 ## 2026-11-04 (HA: Holden's reading light — warmer floor 2000 K → 2700 K)
 
 - The user said the lamp is still too dim for bedtime reading and suspected the colour temperature. They were right: Holden's AL zone warmed to **2000 K** by 21:15, and Hue colour bulbs put out far fewer lumens at that end of the range. `prefer_rgb_color: true` made it worse, because AL drove the lamp with an approximate RGB colour (e.g. "4030 K" rendered peach, `255,207,167`) instead of the bulb's own white mode.
