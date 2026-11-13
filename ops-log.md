@@ -3,6 +3,14 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-13 (HA: Roborock new map — room IDs re-mapped, Closet added)
+
+- The user re-mapped the Roborock Q7 Max. `roborock.get_maps` → map "Home": **16 Office, 17 Main Floor, 18 Bedroom, 19 Bathroom, 20 Closet**. The old IDs were 16 Main Floor / 17 Bedroom / 18 Office / 19 Bathroom, so room cleans would have gone to the wrong rooms (e.g. the nightly "Clean main floor" would have done the Office).
+- `/config/python_scripts/clean_rooms.py`: new segment IDs + `closet` → 20 (uses the existing YAML `input_boolean.clean_closet`, renamed "Closet" in the registry). Every vacuum automation (Clean main floor, Clean M. Bath, room picker Clean button) goes through this script, so nothing else held IDs. `test_clean_rooms.py` updated (office → 16, 12 rooms): 12/12 pass. `python_script.reload`; `clean: false` smoke call OK, no log errors.
+- Dashboards: Closet toggle added to the Vacuum view on both `home-dashboard` (rows of 3, now 4 full rows) and `mushroom-mushroom` (rows of 4); `tools/ha_home_dashboard.py` updated to expect 12 toggles.
+- Not changed: the old map image entity `image.roborock_q7_max_home_2` is unavailable (replaced by `image.kitchen_roborock_q7_max_map_1`) and isn't on any dashboard. `input_boolean.clean_pantry/powder_bathroom/utility` still have no robot room.
+- Backups: `clean_rooms.py.bak-20261113-map`, `test_clean_rooms.py.bak-20261113-map`, `.storage/{core.entity_registry,lovelace.home_dashboard,lovelace.mushroom_mushroom}.bak-20261113-map`.
+
 ## 2026-11-05 (HA: Holden's remote — double tap for Brown Noise "only works on Dimmer")
 
 - The user reported that double-tapping for Brown Noise sometimes works only on Dimmer (Yuki), not on O (Lulu) or Brighter (Starlight).

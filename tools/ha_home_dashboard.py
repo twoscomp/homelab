@@ -438,16 +438,16 @@ for c in sv["tesla"]["cards"]:
 # Vacuum: room toggles 3 per row (4 truncated every name), short names
 VAC_NAMES = {"Main Floor": "Main Floor", "M. Bedroom": "Bedroom", "M. Bathroom": "Bathroom", "Office": "Office",
              "TV/Game": "Game Room", "Study": "Study", "Holden's": "Holden's", "Guest": "Guest",
-             "G. Bathroom": "Guest Bath", "S. Bathroom": "Study Bath", "Hallway": "Hallway"}
+             "G. Bathroom": "Guest Bath", "S. Bathroom": "Study Bath", "Hallway": "Hallway", "Closet": "Closet"}
 vc = sv["vacuum"]["cards"]
 rooms_vac = [x for c in vc if c.get("type") == "horizontal-stack" for x in c["cards"]
              if (x.get("entity") or "").startswith("input_boolean.clean_")]
-assert len(rooms_vac) == 11, len(rooms_vac)
+assert len(rooms_vac) == 12, len(rooms_vac)  # Closet added with the 2026-11-13 Roborock map
 for x in rooms_vac:
     x["name"] = VAC_NAMES[x["name"]]
 first = next(i for i, c in enumerate(vc) if c.get("type") == "horizontal-stack" and rooms_vac[0] in c["cards"])
 vc[:] = [c for c in vc if not (c.get("type") == "horizontal-stack" and any(x in rooms_vac for x in c["cards"]))]
-vc[first:first] = [{"type": "horizontal-stack", "cards": rooms_vac[i:i + 3]} for i in range(0, 11, 3)]
+vc[first:first] = [{"type": "horizontal-stack", "cards": rooms_vac[i:i + 3]} for i in range(0, 12, 3)]
 for c in vc:
     for x in c.get("cards", []):
         if x.get("primary") in SHORT_NAMES:
