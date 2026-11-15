@@ -21,6 +21,10 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - Tested: a manual full run made no change (driest 42.9%, target 45%, plug off: inside the hysteresis band, correct for a rainy 46°F day). A template check of 9 scenarios across the three tiers gave the expected ON/OFF/hold, and the refill message renders. No log errors.
 - **Not changed:** the three Master Bedroom humidifier automations (time schedule, < 38% on, > 40% off) are still disabled and point at `switch.bedroom_humidifier`, which no longer exists in HA. If a bedroom humidifier comes back, point it at `sensor.bedroom_tuya_humidity` vs `sensor.humidity_target` the same way.
 - Backup: `automations.yaml.bak-20261115-humidifier`.
+- **Climate view (both `home-dashboard` and `mushroom-mushroom`):**
+  - The humidifier card is now a mushroom template card: "Off · target 45%, driest room 43%" (icon blue while on). It also fixes the old "Big Humidier" name on mushroom.
+  - New graph under it, "Upstairs Humidity vs Target" (48 h, soft bounds 35–50%): Holden's room, the game room and `sensor.humidity_target`. It plots the two room sensors, not `sensor.upstairs_driest_humidity`, because those have history. It sits in the same unavailable/unknown conditional as the humidifier, so it hides off-season.
+  - Checked in Chrome. Backups: `.storage/lovelace.{home_dashboard,mushroom_mushroom}.bak-20261115-humidity`.
 
 ## 2026-11-13 (HA: Roborock new map — room IDs re-mapped, Closet added)
 
