@@ -3,6 +3,20 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-15 (HA: master bedroom humidifier back, on the old Office Fan plug)
+
+- The user plugged the bedroom humidifier back in. The original plug is lost, so it now uses the Tuya plug that was "Office Fan" (the office has a ceiling fan now).
+- **Plug:** deleted the switch_as_x helper "Tower Fan" (`fan.office_fan_socket_1`, entry `01KHND3JEFK2Y5D99Z8V56RP0B`). Nothing referenced it. Renamed `switch.office_fan_socket` → **`switch.bedroom_humidifier`** (unhidden, icon `mdi:air-humidifier`). Device "Office Fan" → "Bedroom Humidifier", area Office → Master Bedroom. The friendly name is "Bedroom Humidifier Socket" because Tuya adds "Socket" to the device name.
+- **`automation.humidifier_keep_master_bedroom_comfortable`** (id `bedroom_humidifier`): same `sensor.humidity_target` as upstairs. On when `sensor.bedroom_tuya_humidity` is 3+ points below target, off at target. Runs every 15 min, on sensor changes and at HA start.
+- **`automation.humidifier_bedroom_refill_reminder`** (id `bedroom_humidifier_refill_alert`): twin of the upstairs one. On 4+ h and the bedroom still below target − 3 → "Refill the bedroom humidifier" to both phones, at most once a day. The upstairs one is now titled "Refill the upstairs humidifier" (alias "Humidifier - upstairs refill reminder"). They're separate so each keeps its own once-a-day limit.
+- **Deleted** the three disabled bedroom automations it replaces (19:30–08:30 schedule, < 38% on, > 40% off).
+- Tested: a manual run left the humidifier on, which is correct (bedroom 38%, turn-on point 42%).
+- **Dashboards (both):**
+  - Every humidifier card (Bedroom and Game Room pop-ups/views, Climate) is now the template card with state, target and room humidity.
+  - Climate view: cards are named "Upstairs Humidifier" and "Bedroom Humidifier". New "Bedroom Humidity vs Target" graph. The bedroom card and graph hide while the plug is unavailable.
+  - Checked in Chrome.
+- Backups: `.storage/{core.config_entries,core.entity_registry,core.device_registry,lovelace.home_dashboard,lovelace.mushroom_mushroom}.bak-20261115-bedhumid`, `automations.yaml.bak-20261115-bedhumid`.
+
 ## 2026-11-15 (HA: winter humidifier control — outdoor-temp target, driest upstairs room, refill reminder)
 
 - The user plugged the Big Humidifier back in (TP-Link HS103 `switch.big_humidifier`, game room, upstairs) and re-enabled its two automations. The turn-off one shut it off a minute later: the game room was at 44%, above its 40% cut-off.
@@ -19,7 +33,7 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
   - Runs on sensor changes, every 15 min (so pressing the plug button only lasts until the next check, like before), and at HA start. Does nothing if the plug is unavailable (unplugged for the season).
 - **`automation.humidifier_refill_reminder`** (id `humidifier_refill_alert`): plug on 4+ h and the game room still below target − 3 → "Refill the humidifier" to both phones (Pixel 10a + Angie's), at most once a day, checked hourly 08:05–21:05. The HS103 has no power metering, so "running but its own room isn't getting wetter" is the empty-tank signal.
 - Tested: a manual full run made no change (driest 42.9%, target 45%, plug off: inside the hysteresis band, correct for a rainy 46°F day). A template check of 9 scenarios across the three tiers gave the expected ON/OFF/hold, and the refill message renders. No log errors.
-- **Not changed:** the three Master Bedroom humidifier automations (time schedule, < 38% on, > 40% off) are still disabled and point at `switch.bedroom_humidifier`, which no longer exists in HA. If a bedroom humidifier comes back, point it at `sensor.bedroom_tuya_humidity` vs `sensor.humidity_target` the same way.
+- The three old Master Bedroom humidifier automations were replaced later the same day (see the entry above).
 - Backup: `automations.yaml.bak-20261115-humidifier`.
 - **Climate view (both `home-dashboard` and `mushroom-mushroom`):**
   - The humidifier card is now a mushroom template card: "Off · target 45%, driest room 43%" (icon blue while on). It also fixes the old "Big Humidier" name on mushroom.
