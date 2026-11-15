@@ -3,6 +3,25 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-15 (HA: winter humidifier control — outdoor-temp target, driest upstairs room, refill reminder)
+
+- The user plugged the Big Humidifier back in (TP-Link HS103 `switch.big_humidifier`, game room, upstairs) and re-enabled its two automations. The turn-off one shut it off a minute later: the game room was at 44%, above its 40% cut-off.
+- **What was wrong with the old pair** ("Turn on Humidifier when Dry" < 38%, "Turn off Humidifier automatically" > 40%):
+  - They used only `sensor.game_tuya_humidity`, which sits in the humidifier's own room. Last winter the game room read 3–5 points wetter than Holden's room and the study (late-Jan week: game 29–40%, Holden 27–35%, study 24–36%).
+  - A fixed 38–40% band is low for comfort on mild days, and it doesn't drop on freezing nights, when windows can sweat.
+  - They targeted a device_id, not the entity.
+- **New `templates/humidity.yaml`:**
+  - `sensor.humidity_target`: 45% when it's ≥ 40°F outside, 40% at 25–40°F, 35% below 25°F (`sensor.downstairs_outdoor_temperature`; 40% if that sensor is unavailable).
+  - `sensor.upstairs_driest_humidity`: the lower of the game room and Holden's room (`sensor.baby_tuya_humidity`).
+- **`automation.humidifier_keep_upstairs_comfortable`** (id `upstairs_humidifier`) replaces the two old ones (deleted through the config API, which also dropped their registry entries):
+  - On when the driest room is 3+ points below target and the game room is under target + 2.
+  - Off when the driest room reaches target, or the game room passes target + 5 (cap for the humidifier's own room).
+  - Runs on sensor changes, every 15 min (so pressing the plug button only lasts until the next check, like before), and at HA start. Does nothing if the plug is unavailable (unplugged for the season).
+- **`automation.humidifier_refill_reminder`** (id `humidifier_refill_alert`): plug on 4+ h and the game room still below target − 3 → "Refill the humidifier" to both phones (Pixel 10a + Angie's), at most once a day, checked hourly 08:05–21:05. The HS103 has no power metering, so "running but its own room isn't getting wetter" is the empty-tank signal.
+- Tested: a manual full run made no change (driest 42.9%, target 45%, plug off: inside the hysteresis band, correct for a rainy 46°F day). A template check of 9 scenarios across the three tiers gave the expected ON/OFF/hold, and the refill message renders. No log errors.
+- **Not changed:** the three Master Bedroom humidifier automations (time schedule, < 38% on, > 40% off) are still disabled and point at `switch.bedroom_humidifier`, which no longer exists in HA. If a bedroom humidifier comes back, point it at `sensor.bedroom_tuya_humidity` vs `sensor.humidity_target` the same way.
+- Backup: `automations.yaml.bak-20261115-humidifier`.
+
 ## 2026-11-13 (HA: Roborock new map — room IDs re-mapped, Closet added)
 
 - The user re-mapped the Roborock Q7 Max. `roborock.get_maps` → map "Home": **16 Office, 17 Main Floor, 18 Bedroom, 19 Bathroom, 20 Closet**. The old IDs were 16 Main Floor / 17 Bedroom / 18 Office / 19 Bathroom, so room cleans would have gone to the wrong rooms (e.g. the nightly "Clean main floor" would have done the Office).
