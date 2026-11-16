@@ -3,6 +3,32 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-16 (Glances on nuc8-1 down 2 weeks; Watchman 14 → 6; Glances veth sensor buildup)
+
+**Glances (nuc8-1)**
+- HA's nuc8-1 Glances entry had been in `setup_retry` since the 11-08 HA restart: `http://192.168.0.101:61208/api/4/all` refused.
+- **Root cause:** the nuc8-1 task of `monitoring_glances` (global) exited **0** on 2026-10-31 16:34, 3 min after starting. With `restart_policy: on-failure`, Swarm treats a clean exit as done and never replaces it. `docker service ls` showed **1/1**, which looked healthy. The container was already removed, so the reason for the exit is unknown.
+- **Fix:** `monitoring.yaml` glances `restart_policy.condition: any`, then stack redeploy. Now 2/2; the image had been pruned, so the task sat in "Preparing" ~3 min. API answers on .101. Reloaded the HA entry; all 10 nuc8-1 sensors are reporting again.
+- **Same latent risk, not changed:** `epic-games`, `threadfin` (media.yaml) and `heartbeat-pusher` also use `on-failure`. None has a Complete task now.
+- **Nothing alerts on this:** Glances isn't in heartbeat-pusher/Kuma.
+
+**Glances veth sensors**
+- Each container restart creates a new veth interface, and Glances adds a `ping_veth…_rx/_tx` sensor pair for it, enabled. There were 108 (56 enabled, the rest disabled or dead).
+- Set `pref_disable_new_entities: true` on both Glances entries, then removed all 108 from the registry (any that still exist come back disabled). Glances now has 146 entities, the 20 dashboard sensors enabled. Backup `core.entity_registry.bak-20261116-glances`.
+
+**Watchman (14 → 6 missing)**
+- Ignored false positives via its options flow (`ignored_items`):
+  - `lovelace.*`: dashboard storage keys, not entities.
+  - `media_player.lg_webos_smart_tv`: unavailable whenever the TV is off.
+  - The two Tesla buttons: "unknown" until pressed.
+  - The Tesla destination / distance-to-arrival sensors and destination tracker: unknown without a nav destination.
+  - Backup `core.config_entries.bak-20261116-watchman`.
+- **Remaining 6 are real, physical, and left for the user:**
+  - **Blue Mushroom Lamp** (IKEA E12 bulb, Guest Room): ZHA last seen 2026-11-14 ~00:03 local.
+  - **Study Desk Lamp** (eWeLink plug): last seen 2026-11-16 ~00:14 local.
+  - Both are mains devices with good LQI, and all 14 other ZHA devices check in, so they most likely lost power. **Guest Room Lights** and **Study Light Group** are single-member groups of those two, so they show unavailable too.
+  - **Goomba** (Roomba j7, `vacuum.goomba`, bin-full sensor): Roomba entry in `setup_retry` since 11-08, `192.168.3.94` unreachable (no ping from nuc8-1 either). UniFi has shown it off Wi-Fi since 2026-11-13 09:43 UTC. It's still used by "Vacuum - Recall the vacuums" and `clean_rooms.py`.
+
 ## 2026-11-15 (HA: master bedroom humidifier back, on the old Office Fan plug)
 
 - The user plugged the bedroom humidifier back in. The original plug is lost, so it now uses the Tuya plug that was "Office Fan" (the office has a ceiling fan now).
