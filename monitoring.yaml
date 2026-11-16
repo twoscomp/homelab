@@ -77,6 +77,8 @@ services:
       resources:
         limits:
           memory: 160M
+      # "any", not on-failure: on 2026-10-31 the nuc8-1 task exited 0 and Swarm treated it as
+      # finished, so nuc8-1 had no glances for 2 weeks while the service still showed 1/1.
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
