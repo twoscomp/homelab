@@ -3,6 +3,13 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-18 (HA: 3D printer plug → Game Room TV bias light)
+
+- The user is trying the TP-Link HS103 that was "3D Printer" as a switch for a lamp behind the new Panasonic plasma upstairs (bias light).
+- **Registry:** device "3D Printer" → **"TV Bias Light"**, area Study → Game Room. `switch.3d_printer` → **`switch.tv_bias_light`** (icon `mdi:television-ambient-light`); the LED/cloud/signal/on-since/restart entities were renamed to `*_tv_bias_light_*` too. Nothing else referenced the old IDs (grepped `/config` YAML and `.storage`). Backups `core.{entity,device}_registry.bak-20261118-biaslight`.
+- **Dashboards (both):** the card moved from Office to Game Room as "Bias Light", next to Desk Lamp. Home: Humidifier is now its own full-width row and the Office fan card is full width. Backups `lovelace.{home_dashboard,mushroom_mushroom}.bak-20261118-biaslight`. Edited live rather than re-running `tools/ha_home_dashboard.py`, which would revert the hand-edited bedroom humidifier card on Climate.
+- Still a switch, so it isn't in the lights-on count, the `#lights` pop-up or `script.all_lights_off`. The UniFi client and Kasa app still call it "3D Printer".
+
 ## 2026-11-16 (Glances on nuc8-1 down 2 weeks; Watchman 14 → 6; Glances veth sensor buildup)
 
 **Glances (nuc8-1)**
