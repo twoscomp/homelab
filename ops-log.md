@@ -3,12 +3,18 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
-## 2026-11-18 (HA: 3D printer plug → Game Room TV bias light)
+## 2026-11-18 (HA: plug swaps — TV bias light, Christmas inflatable, label printer)
 
 - The user is trying the TP-Link HS103 that was "3D Printer" as a switch for a lamp behind the new Panasonic plasma upstairs (bias light).
 - **Registry:** device "3D Printer" → **"TV Bias Light"**, area Study → Game Room. `switch.3d_printer` → **`switch.tv_bias_light`** (icon `mdi:television-ambient-light`); the LED/cloud/signal/on-since/restart entities were renamed to `*_tv_bias_light_*` too. Nothing else referenced the old IDs (grepped `/config` YAML and `.storage`). Backups `core.{entity,device}_registry.bak-20261118-biaslight`.
 - **Dashboards (both):** the card moved from Office to Game Room as "Bias Light", next to Desk Lamp. Home: Humidifier is now its own full-width row and the Office fan card is full width. Backups `lovelace.{home_dashboard,mushroom_mushroom}.bak-20261118-biaslight`. Edited live rather than re-running `tools/ha_home_dashboard.py`, which would revert the hand-edited bedroom humidifier card on Climate.
 - Still a switch, so it isn't in the lights-on count, the `#lights` pop-up or `script.all_lights_off`. The UniFi client and Kasa app still call it "3D Printer".
+
+- **Later the same day, two more plugs swapped:**
+  - The Tuya plug that was "Label Printer" now runs a **Christmas inflatable**. Device → "Christmas Inflatable", area Outside. `switch.label_printer` → **`switch.christmas_inflatable`** (icon `mdi:pine-tree`). The entity name is `""` so Tuya doesn't double the name.
+  - The Kasa HS103 that was the garage **Box Fan** (192.168.3.29) had never been added to HA; only UniFi tracked it. Added a tplink entry by host (`01M7RKB7B10P1FD5BMK9HRA4SJ`, no credentials needed). Device → "Label Printer", area Office; it took over **`switch.label_printer`** (icon `mdi:printer`), with `*_label_printer_*` for its extra entities. The Office cards on both dashboards needed no change.
+  - **Dashboards:** "Inflatable" card in the Entrance/Outside pop-up (paired with Varmblixt) and on the old Outside view. It's wrapped in a conditional, so it hides when unplugged after the season. Backups `*.bak-20261118-plugswap`.
+  - No YAML references to `switch.label_printer`. Its old history now sits under `switch.christmas_inflatable`.
 
 ## 2026-11-16 (Glances on nuc8-1 down 2 weeks; Watchman 14 → 6; Glances veth sensor buildup)
 
