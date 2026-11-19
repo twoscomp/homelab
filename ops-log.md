@@ -16,6 +16,14 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
   - **Dashboards:** "Inflatable" card in the Entrance/Outside pop-up (paired with Varmblixt) and on the old Outside view. It's wrapped in a conditional, so it hides when unplugged after the season. Backups `*.bak-20261118-plugswap`.
   - No YAML references to `switch.label_printer`. Its old history now sits under `switch.christmas_inflatable`.
 
+- **Christmas inflatable automation:**
+  - `binary_sensor.christmas_inflatable_weather_hold` comes from `/config/templates/christmas_inflatable.yaml`. It's trigger-based and runs every 5 min plus at HA start: PirateWeather live attributes + `weather.get_forecasts` hourly[0] (the current hour).
+  - **Hold when:** gusts ≥ 25 mph, sustained ≥ 15, thunderstorm/hail/pouring, ≥ 0.10 in/h, or any precip at ≤ 34°F. Attribute `reason` says why. No `delay_off`: it also held the first unknown → off for 30 min, which would recur on every restart. The 30-min calm is the automation's `for:` on the off trigger instead. The logic was tested with sample inputs via `/api/template`.
+  - `automation.christmas_inflatable_schedule`: on at sunset −15 min, off at 23:00. Hold on → off, plus a notification to Daniel's Pixel if it was inflated. Hold off for 30 min, sunset or HA start → on if inside the window. Plugged in / power back → snaps to the desired state. Manual toggles stick until the next event.
+  - No daytime run: low visibility, and North Texas wind peaks in the afternoon.
+  - The Inflatable card (both dashboards) is now a template card: "On · until 11 PM" / "Held · gusts 27 mph", orange while held.
+  - Backups `automations.yaml.bak-20261118-inflatable`, `lovelace.*.bak-20261118-inflatable`.
+
 ## 2026-11-16 (Glances on nuc8-1 down 2 weeks; Watchman 14 → 6; Glances veth sensor buildup)
 
 **Glances (nuc8-1)**
