@@ -24,6 +24,11 @@ The old guest room becomes Elijah's room (he moves in 11-21); the old study is t
 - Backups `*.bak-20261120-rooms` (entity/device/area registries, config_entries, both lovelace files, automations.yaml, scenes.yaml).
 - **When Elijah's camera (`camera.elijah_medium`, G4 Instant, area Master Bedroom) moves:** `light.bedroom_fan_light`'s estimate uses its `binary_sensor.g4_instant_is_dark` and will break. It needs a new basis (or a lux sensor in the master bedroom).
 
+- **Part 2 (same day, the user's answers):**
+  - **Baths (vacuum display names):** `input_boolean.clean_guest_bathroom` = **Kids' Bathroom** ("Kids' Bath"), the hallway bath Elijah shares with Holden. `clean_study_bathroom` = **Guest Bathroom** ("Guest Bath"). IDs unchanged (Roomba regions).
+  - **Elijah's camera** (UniFi Protect device "Elijah", G4 Instant) → area Elijah's Room. Done a day early, ahead of the physical move on 11-21, so nobody has to remember it. Its card moved from the Bedroom pop-up/view to Elijah's Room on both dashboards.
+  - **`light.bedroom_fan_light`** now uses the camera only while `area_id('binary_sensor.g4_instant_is_dark') == 'bedroom'`. Otherwise it falls back to the HS200 wall-switch state (basis "wall switch (no camera in the bedroom)"). So the camera move can't feed it Elijah's room. The estimate is gone until a light sensor goes in the master bedroom. Backup `bedroom_fan_light.yaml.bak-20261120-camera`.
+
 ## 2026-11-18 (HA: plug swaps — TV bias light, Christmas inflatable, label printer)
 
 - The user is trying the TP-Link HS103 that was "3D Printer" as a switch for a lamp behind the new Panasonic plasma upstairs (bias light).
