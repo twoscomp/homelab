@@ -29,6 +29,13 @@ The old guest room becomes Elijah's room (he moves in 11-21); the old study is t
   - **Elijah's camera** (UniFi Protect device "Elijah", G4 Instant) → area Elijah's Room. Done a day early, ahead of the physical move on 11-21, so nobody has to remember it. Its card moved from the Bedroom pop-up/view to Elijah's Room on both dashboards.
   - **`light.bedroom_fan_light`** now uses the camera only while `area_id('binary_sensor.g4_instant_is_dark') == 'bedroom'`. Otherwise it falls back to the HS200 wall-switch state (basis "wall switch (no camera in the bedroom)"). So the camera move can't feed it Elijah's room. The estimate is gone until a light sensor goes in the master bedroom. Backup `bedroom_fan_light.yaml.bak-20261120-camera`.
 
+- **False "Temperature sensor needs a battery: Study (offline)" alert (20:38, Daniel's phone):** a side effect of the sensor-ID swap.
+  - Renaming guest_tuya → elijah_tuya, then study_tuya → guest_tuya, left each old ID missing for an instant. The `silent` template triggers in **Maintenance - phone alerts** (id `maintenance_alerts`) treat a missing entity as offline. They fired twice (traces at 02:38:30 UTC) while the automation still had its old config. The second notification replaced the first (same tag).
+  - **Both sensors are fine:** Elijah Tuya reports about every 30 min, Guest Tuya about every 10. Their history moved with the renames.
+  - The current config is correct (no stale IDs or labels anywhere in automations/scripts/scenes/templates).
+  - **Hardened:** all 7 `silent` triggers now have `for: 10 min`, so renames, restarts and Zigbee blips don't alert. A really dead sensor still alerts, 10 min later. Backup `automations.yaml.bak-20261120-silentfor`.
+  - Lesson: pause automations that watch an entity before renaming it.
+
 ## 2026-11-18 (HA: plug swaps — TV bias light, Christmas inflatable, label printer)
 
 - The user is trying the TP-Link HS103 that was "3D Printer" as a switch for a lamp behind the new Panasonic plasma upstairs (bias light).
