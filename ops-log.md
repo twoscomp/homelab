@@ -3,6 +3,27 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-20 (HA: room shuffle, part 1 — Guest Room → Elijah's Room, Study → Guest Room)
+
+The old guest room becomes Elijah's room (he moves in 11-21); the old study is the new guest room. So far only the Blue Mushroom Lamp has physically moved. More moves are coming from the user (the bathroom(s), probably Elijah's camera).
+
+- **Areas (IDs unchanged, names only):** `guest_room_hue_lights` = **Elijah's Room** (`mdi:teddy-bear`). `front_bedroom_hue_lights` = **Guest Room** (`mdi:bed`). The legacy IDs are now misleading; use the names.
+- **Blue Mushroom Lamp:** device renamed (dropped "Light"), moved to Guest Room. Entity ID kept: the Adaptive Lighting "Guest Bedroom" zone and the Guest Mode automation reference it. The AL device moved to Guest Room with it.
+- **Desk lamp (stays put):** `light.study_desk_lamp` → **`light.guest_room_desk_lamp`** "Guest Room Desk Lamp" (switch_as_x). The hidden `switch.ewelink_smart_plug_switch` was renamed only.
+- **Light groups:** `light.guest_room_lights` (area Guest Room) = mushroom + desk lamp. **Deleted** the "Front Bedroom Lights" group (`light.study_light_group`, only the desk lamp).
+- **Bedtime scene:** removed that group rather than swapping in guest_room_lights, so bedtime no longer switches off the guests' lamps.
+- **Tuya temp/humidity sensors stay in their rooms, so the IDs swapped meaning:** `sensor.guest_tuya_*` (Guest Tuya) → **`sensor.elijah_tuya_*`** (Elijah Tuya), then `sensor.study_tuya_*` → **`sensor.guest_tuya_*`**. History follows each physical sensor. `sensor.guest_tuya_*` now means the NEW guest room.
+- **Tuya-silent alert** (automations.yaml) updated with the same swap and labels ("Elijah's Room", "Guest Room").
+- **Vacuum:** `input_boolean.clean_guest_room` = "Elijah's Room", `clean_front_bedroom` = "Guest Room" (display names only; the IDs map to Roomba regions in `clean_rooms.py`). Bathrooms are untouched until the user says which is whose.
+- **Dashboards (both):**
+  - Home: the room tiles are now "Guest Room" (#guest-room: lights row, Mushroom + Desk Lamp, Guest Mode + Adaptive Lighting) and "Elijah's Room" (#elijahs-room: temp/humidity only for now).
+  - Old dashboard: views `guest-room` and `elijahs-room`.
+  - Climate, Maintenance and Vacuum labels updated. Daniel's "Study" favorite is now "Guest Room".
+- **Fix found on the way:** the Home Office tile showed the Study Tuya temperature; it now uses the office's own motion-sensor temperature, matching its pop-up.
+- **Unrelated, pre-existing:** `automation.turn_game_room_fan_on_when_there_is_motion` is an orphaned registry entry (not in any YAML), so it shows unavailable.
+- Backups `*.bak-20261120-rooms` (entity/device/area registries, config_entries, both lovelace files, automations.yaml, scenes.yaml).
+- **When Elijah's camera (`camera.elijah_medium`, G4 Instant, area Master Bedroom) moves:** `light.bedroom_fan_light`'s estimate uses its `binary_sensor.g4_instant_is_dark` and will break. It needs a new basis (or a lux sensor in the master bedroom).
+
 ## 2026-11-18 (HA: plug swaps — TV bias light, Christmas inflatable, label printer)
 
 - The user is trying the TP-Link HS103 that was "3D Printer" as a switch for a lamp behind the new Panasonic plasma upstairs (bias light).
