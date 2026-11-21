@@ -43,6 +43,20 @@ The old guest room becomes Elijah's room (he moves in 11-21); the old study is t
   - **Dropped:** Bedroom group, Bedroom Fan Light, Kitchen, Game Room, Thermostat (0–2 uses each), and Guest Room (its desk lamp's 12 taps were from the study era). The Office/Garage group tiles were replaced by their members (used ~3× more).
   - Angie's favorites unchanged. Backup `lovelace.home_dashboard.bak-20261120-favorites`.
 
+- **Favorites are now data-driven, with a monthly review (both users):**
+  - **Storage:** `sensor.favorites_daniel` / `sensor.favorites_angie` (trigger-based templates in `/config/templates/favorites.yaml`). Attributes: `tiles` [{entity, name, icon?, pinned?, extra?, added?}], `pending`, `message`. Changed only by the event `favorites_update {user, tiles?, pending?, message?}`. Attributes survived a template reload and a real restart.
+  - **Dashboard:** each Favorites section is a heading plus an auto-entities card. It builds tiles from `tiles` (pairs in horizontal-stacks; full-width tiles like Angie's Roborock alone) and falls back to the 11-20 list if the sensor is empty. Changing favorites never edits Lovelace.
+  - **Review script:** `/config/scripts/favorites_review.py` (read-only) via the new `shell_command.favorites_review` (needed one HA restart). It counts each user's own `call_service` events over 30 days from the recorder.
+    - Only the first call per context counts: a group tap is re-issued to every member under the same context and user. Derived contexts are skipped, as are calls targeting 4+ entities, and repeats within 10 s count once.
+    - Proposal: keep the order; swap the weakest unpinned tile when a newcomer has ≥4 taps and beats it by 3; grow to 10 at ≥5; drop unpinned 0-tap tiles older than 30 days.
+    - Runs in ~0.5 s warm / 20 s cold. The first state-table version blew the 60 s shell_command limit.
+  - **Automations:** `favorites_monthly_review` (1st of the month, 10:00) sends an Apply / Keep as is notification to each phone, and failures become a persistent notification. `favorites_review_action` handles `FAV_APPLY_<USER>` / `FAV_KEEP_<USER>`. Both paths were tested with synthetic events. A live run for Daniel only sent his real proposal to the Pixel.
+  - **Correction to the earlier re-pick tonight:** the logbook/state-based count credited lamps for group taps. Service calls show Daniel taps the **Garage** (16) and **Office** (15) group tiles, while Work Bench and Garage Ceiling got 0. The pending proposal fixes that.
+  - Bias Light is `pinned`. `input_boolean.study_motion` renamed "Office Motion" (stale name from the room shuffle).
+  - **Angie's current proposal** (not sent): add Office Ceiling Fan, Kitchen Lights, Office Motion; drop Bathroom and Bathroom Fan (0 app taps). Her Bedside Lamp has 280 taps in 30 days.
+  - HA was also updated 2026.11.0 → 11.2 at 21:57 (not by Claude).
+  - Backups `configuration.yaml.bak-20261120-favorites`, `lovelace.home_dashboard.bak-20261120-dynfav`.
+
 ## 2026-11-18 (HA: plug swaps — TV bias light, Christmas inflatable, label printer)
 
 - The user is trying the TP-Link HS103 that was "3D Printer" as a switch for a lamp behind the new Panasonic plasma upstairs (bias light).
