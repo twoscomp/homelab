@@ -36,6 +36,13 @@ The old guest room becomes Elijah's room (he moves in 11-21); the old study is t
   - **Hardened:** all 7 `silent` triggers now have `for: 10 min`, so renames, restarts and Zigbee blips don't alert. A really dead sensor still alerts, 10 min later. Backup `automations.yaml.bak-20261120-silentfor`.
   - Lesson: pause automations that watch an entity before renaming it.
 
+- **Daniel's Home favorites re-picked from 30 days of his own logbook actions** (context_user_id = Daniel; `/api/logbook` for 10-21 → 11-21, 423k entries).
+  - **Counting method:** actions within 3 s are clustered into one tap, and each switch_as_x switch counts as its light.
+  - A group gets credit only if all its members changed. Otherwise the member does; a single-lamp tap also flips its group, and the logbook credits that to the user too.
+  - **New set:** Bedside Lamp 16 · **Bias Light** 16 (user asked for it) · Office Fan Light 13 · Office Ceiling 9 · Work Bench 6 · Garage Ceiling 5 · Holden's Lamp 4 · Holden's Desk Lamp 4 · Office Motion (`input_boolean.study_motion`) 6.
+  - **Dropped:** Bedroom group, Bedroom Fan Light, Kitchen, Game Room, Thermostat (0–2 uses each), and Guest Room (its desk lamp's 12 taps were from the study era). The Office/Garage group tiles were replaced by their members (used ~3× more).
+  - Angie's favorites unchanged. Backup `lovelace.home_dashboard.bak-20261120-favorites`.
+
 ## 2026-11-18 (HA: plug swaps — TV bias light, Christmas inflatable, label printer)
 
 - The user is trying the TP-Link HS103 that was "3D Printer" as a switch for a lamp behind the new Panasonic plasma upstairs (bias light).
