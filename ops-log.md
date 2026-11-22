@@ -3,6 +3,17 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-21 (HA: Bedside Lamp → Elijah's Room; Holden's remote Brown Noise re-pinned)
+
+**Bedside Lamp** (Hue LWB006 `light.bedside_lamp_light`) moved from the master bedroom to Elijah's Room. Backups: `.storage/*.bak-20261121-bedside`.
+- Device area `bedroom` → `guest_room_hue_lights` (= Elijah's Room). Name kept as "Bedside Lamp".
+- Removed from the "Master Bedroom Lights" group (`light.master_bedroom_lights`), which now holds the fan light and Master Entry.
+- Its Adaptive Lighting zone (entry `01K4KHQ2PRCR5QKC4ER8G70WNV`, the lamp is its only light): title "Elijah's Room", device moved to Elijah's Room, and switches renamed `switch.adaptive_lighting_*master_bedroom` → `*_elijahs_room` (nothing referenced them). Settings unchanged (evening 10% / 2000 K after 19:30).
+- Dashboards: Home's Bedroom pop-up loses the Lamp (Fan is now full width). The Elijah's Room pop-up gains a "Bedside Lamp" light card, and its room tile follows the lamp (orange when on). Same on the old mushroom dashboard (bedroom view / elijahs-room view / room tile).
+- Favorites (`sensor.favorites_*`) still show the lamp by entity, so nothing to change there. `script.all_lights_off` still turns it off.
+
+**Holden's remote, double tap = Brown Noise was playing nothing.** It was pinned to Hatch favorite 295940064, which is gone from the Hatch (its scene has been `unavailable` since at least 10-22; the favorite was most likely edited in the app, and Hatch then re-created it as 296930135 on 10-21). The story script then falls back to the top-listed "Brown Noise" (295940102, the one that never worked): tonight at 21:34 that scene fired, but the Hatch kept playing Yuki. Re-pinned `automation.holden_s_remote` to `favorite_id: 296930135` (`automations.yaml.bak-20261121-brownnoise`). Not tested on the device, so as not to play sound in Holden's room at night. This probably also explains the 11-05 "double tap only sometimes works" report.
+
 ## 2026-11-20 (HA: room shuffle, part 1 — Guest Room → Elijah's Room, Study → Guest Room)
 
 The old guest room becomes Elijah's room (he moves in 11-21); the old study is the new guest room. So far only the Blue Mushroom Lamp has physically moved. More moves are coming from the user (the bathroom(s), probably Elijah's camera).
