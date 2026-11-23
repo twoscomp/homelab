@@ -44,6 +44,12 @@ Then, from a remote device on cellular:
 2. `ping 192.168.0.180` (PS5-177).
 3. Test Docker interplay: `sudo systemctl restart docker` on nuc8-2, then ping again.
 
+### Verified 2026-11-22
+- **Firewall:** with no Docker restart, `ts-forward` is first in FORWARD. After `systemctl restart docker`, Docker's jumps go above it (DOCKER-USER, DOCKER-FORWARD, then ts-forward). That's fine: Docker's chains only DROP `docker_gwbridge`↔`docker_gwbridge`, and the ts-forward/MASQUERADE counters kept climbing after the restart.
+- **NAT:** endpoint-independent mapping (`MappingVariesByDestIP: false`), and UPnP/NAT-PMP/PCP all work on the UDM. tailscaled maps the WAN port 41641 to nuc8-2 by itself, so no manual port forward is needed.
+- **`tailscale netcheck` run as a normal user reports `UDP: false` and no DERP latency. It's wrong; ignore it.** Run `sudo tailscale netcheck`, or read the daemon's view: `journalctl -u tailscaled | grep NetInfo` (`udp=true portmap=active-UMC`).
+- **PS5-177** answers unicast discovery on 9302 in rest mode (`620 Server Standby`). That's the port chiaki-ng's wake uses. TCP 9295 is refused while it's in standby, which is normal.
+
 ## Clients
 
 - **Android/iOS:** the Tailscale app accepts subnet routes automatically.

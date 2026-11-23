@@ -3,7 +3,7 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
-## 2026-11-22 (Tailscale subnet router on nuc8-2 — staged, waiting for sign-in)
+## 2026-11-22 (Tailscale subnet router on nuc8-2 — live 192.168.0.0/24)
 
 Goal: remote devices (Steam Deck, phone) reach the home LAN `192.168.0.0/24`, including the PS5s for chiaki-ng Remote Play and wake. Host choice and full runbook: `tailscale/README.md`.
 - nuc8-2 (host install, not swarm): ran `tailscale/setup.sh`.
@@ -14,6 +14,12 @@ Goal: remote devices (Steam Deck, phone) reach the home LAN `192.168.0.0/24`, in
 - Prefs preset via `tailscale up --hostname=nuc8-2 --advertise-routes=192.168.0.0/24`. SNAT is on, so no UDM static route is needed. **State: Logged out, waiting for the user to open the login link.**
 - PS5 Remote Play discovery (UDP 9302) found **PS5-177 at 192.168.0.180**. The second PS5 is on the main LAN but was off.
 - **Pending (user):** sign in, then in the admin console approve the `192.168.0.0/24` route and disable key expiry for nuc8-2; give both PS5s DHCP reservations; Steam Deck needs `--accept-routes`. **Pending (next session):** run the README's verify steps (ts-forward rules vs Docker's FORWARD DROP; direct vs DERP).
+- **Signed in and checked (same evening).** Route `192.168.0.0/24` approved and primary, key expiry off (`KeyExpiry` absent in `tailscale status --json`).
+  - Pixel 10a (home Wi-Fi) LAN traffic was forwarded and MASQUERADEd through nuc8-2.
+  - `systemctl restart docker` on nuc8-2 put Docker's FORWARD jumps above `ts-forward`, but forwarding kept working (Docker only drops gwbridge↔gwbridge). All 10 containers came back and AdGuard .254 resolves.
+  - NAT is easy and UPnP is active (tailscaled mapped WAN port 41641 itself), so expect direct connections. Unprivileged `tailscale netcheck` falsely reports `UDP: false`; use sudo.
+  - PS5-177 (.180) is in rest mode and answers wake/discovery on 9302.
+  - Still to do: a true off-LAN test (phone on cellular → `tailscale ping`, ping .180).
 - Noticed: nuc8-2 has a newer kernel pending (6.8.0-149; running -147). Not rebooted.
 
 ## 2026-11-21 (HA: Bedside Lamp → Elijah's Room; Holden's remote Brown Noise re-pinned)
