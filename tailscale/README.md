@@ -36,7 +36,7 @@ SNAT stays on (the default): LAN devices see traffic from 192.168.0.26, so the U
 On nuc8-2:
 ```bash
 tailscale status                        # nuc8-2 online, no "Log in at"
-sudo iptables -S ts-forward             # tailscale's FORWARD rules (Docker's FORWARD policy is DROP)
+sudo iptables -S ts-forward             # tailscale's FORWARD rules
 sudo iptables -S FORWARD | head -4      # FORWARD should jump to ts-forward
 ```
 Then, from a remote device on cellular:
@@ -49,6 +49,8 @@ Then, from a remote device on cellular:
 - **NAT:** endpoint-independent mapping (`MappingVariesByDestIP: false`), and UPnP/NAT-PMP/PCP all work on the UDM. tailscaled maps the WAN port 41641 to nuc8-2 by itself, so no manual port forward is needed.
 - **`tailscale netcheck` run as a normal user reports `UDP: false` and no DERP latency. It's wrong; ignore it.** Run `sudo tailscale netcheck`, or read the daemon's view: `journalctl -u tailscaled | grep NetInfo` (`udp=true portmap=active-UMC`).
 - **PS5-177** answers unicast discovery on 9302 in rest mode (`620 Server Standby`). That's the port chiaki-ng's wake uses. TCP 9295 is refused while it's in standby, which is normal.
+
+- **FORWARD policy after a reboot (2026-11-23):** the sysctl file turns on forwarding before Docker starts, so Docker no longer sets the FORWARD policy to DROP. It boots as ACCEPT. Tailscale works either way; restoring default-deny is pending (see ops-log 2026-11-22).
 
 ## Clients
 

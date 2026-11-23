@@ -20,7 +20,10 @@ Goal: remote devices (Steam Deck, phone) reach the home LAN `192.168.0.0/24`, in
   - NAT is easy and UPnP is active (tailscaled mapped WAN port 41641 itself), so expect direct connections. Unprivileged `tailscale netcheck` falsely reports `UDP: false`; use sudo.
   - PS5-177 (.180) is in rest mode and answers wake/discovery on 9302.
   - Still to do: a true off-LAN test (phone on cellular → `tailscale ping`, ping .180).
-- Noticed: nuc8-2 has a newer kernel pending (6.8.0-149; running -147). Not rebooted.
+- **2026-11-23: nuc8-2 rebooted onto kernel 6.8.0-149** (at the user's request; back in about 3.5 min). Afterwards: tailscaled active and online, route `192.168.0.0/24` still primary, key expiry off, `ip_forward=1`, GRO unit applied, all 10 containers up, AdGuard .254 resolving.
+  - **Found:** the exit node is now advertised and approved (`0.0.0.0/0`, `::/0`). The user ran `tailscale set --advertise-exit-node` by hand on 11-22 at 22:20 Central. Left as is.
+  - **Found:** the FORWARD policy is now **ACCEPT**, not DROP. Docker only sets DROP when it turns `ip_forward` on itself, and `/etc/sysctl.d/99-tailscale.conf` now does that earlier in boot. Tailscale still works either way. Restoring DROP (a oneshot `iptables -P FORWARD DROP` ordered before docker/tailscaled) is **waiting on the user's OK**.
+  - PS5-177 (.180) answers ping and port 9302 (`620 Server Standby`).
 
 ## 2026-11-21 (HA: Bedside Lamp → Elijah's Room; Holden's remote Brown Noise re-pinned)
 
