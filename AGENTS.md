@@ -94,6 +94,12 @@ After every `docker-compose -f media.yaml config | docker stack deploy -c - medi
 
 - Sonarr/Radarr/Prowlarr/Lidarr (late-2026 versions) only honour `X-Forwarded-For` from `<TrustedNetworks>` in `config.xml`. It must be `10.0.1.0/24` (the overlay NPM proxies from), or "Disabled for Local Addresses" asks LAN users to log in. Recheck after a fresh install or a config reset.
 
+### Tailscale subnet router (nuc8-2)
+
+- Runs on the **nuc8-2 host** (apt package + systemd), not in swarm. The runbook, admin-console steps, verify checklist and rollback are in `tailscale/README.md`; `tailscale/setup.sh` is idempotent.
+- "Can't reach home over Tailscale" → check in this order: `tailscale status` on nuc8-2 (logged in? key expired?); the route approved in the admin console; the client accepting routes (Linux/Steam Deck needs `--accept-routes`); `sudo iptables -S ts-forward` exists (Docker's FORWARD policy is DROP); a remote network also on 192.168.0.0/24 (clash).
+- Remote Play: chiaki-ng can't discover PS5s over the tunnel; add them by IP (PS5-177 = 192.168.0.180).
+
 ## Infra Troubleshooting — Standing Instruction
 
 Any time you troubleshoot a homelab/infra problem, do both of the following before ending the session:

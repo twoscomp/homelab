@@ -3,6 +3,19 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-22 (Tailscale subnet router on nuc8-2 — staged, waiting for sign-in)
+
+Goal: remote devices (Steam Deck, phone) reach the home LAN `192.168.0.0/24`, including the PS5s for chiaki-ng Remote Play and wake. Host choice and full runbook: `tailscale/README.md`.
+- nuc8-2 (host install, not swarm): ran `tailscale/setup.sh`.
+  - Tailscale 1.104.7 from the official noble apt repo; `tailscaled` enabled.
+  - `/etc/sysctl.d/99-tailscale.conf` makes `net.ipv4.ip_forward=1` persistent (before, only Docker set it at runtime).
+  - `tailscale-gro.service` turns on UDP GRO forwarding on eno1.
+  - apt/needrestart restarted no services; Docker, keepalived, swarm and AdGuard VIP2 verified fine afterwards.
+- Prefs preset via `tailscale up --hostname=nuc8-2 --advertise-routes=192.168.0.0/24`. SNAT is on, so no UDM static route is needed. **State: Logged out, waiting for the user to open the login link.**
+- PS5 Remote Play discovery (UDP 9302) found **PS5-177 at 192.168.0.180**. The second PS5 is on the main LAN but was off.
+- **Pending (user):** sign in, then in the admin console approve the `192.168.0.0/24` route and disable key expiry for nuc8-2; give both PS5s DHCP reservations; Steam Deck needs `--accept-routes`. **Pending (next session):** run the README's verify steps (ts-forward rules vs Docker's FORWARD DROP; direct vs DERP).
+- Noticed: nuc8-2 has a newer kernel pending (6.8.0-149; running -147). Not rebooted.
+
 ## 2026-11-21 (HA: Bedside Lamp → Elijah's Room; Holden's remote Brown Noise re-pinned)
 
 **Bedside Lamp** (Hue LWB006 `light.bedside_lamp_light`) moved from the master bedroom to Elijah's Room. Backups: `.storage/*.bak-20261121-bedside`.
