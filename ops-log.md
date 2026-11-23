@@ -22,7 +22,14 @@ Goal: remote devices (Steam Deck, phone) reach the home LAN `192.168.0.0/24`, in
   - Still to do: a true off-LAN test (phone on cellular → `tailscale ping`, ping .180).
 - **2026-11-23: nuc8-2 rebooted onto kernel 6.8.0-149** (at the user's request; back in about 3.5 min). Afterwards: tailscaled active and online, route `192.168.0.0/24` still primary, key expiry off, `ip_forward=1`, GRO unit applied, all 10 containers up, AdGuard .254 resolving.
   - **Found:** the exit node is now advertised and approved (`0.0.0.0/0`, `::/0`). The user ran `tailscale set --advertise-exit-node` by hand on 11-22 at 22:20 Central. Left as is.
-  - **Found:** the FORWARD policy is now **ACCEPT**, not DROP. Docker only sets DROP when it turns `ip_forward` on itself, and `/etc/sysctl.d/99-tailscale.conf` now does that earlier in boot. Tailscale still works either way. Restoring DROP (a oneshot `iptables -P FORWARD DROP` ordered before docker/tailscaled) is **waiting on the user's OK**.
+  - **Found:** the FORWARD policy was **ACCEPT** after the reboot. Docker only sets DROP when it turns `ip_forward` on itself, and `/etc/sysctl.d/99-tailscale.conf` now does that earlier in boot. **Fixed the documented way (user's call: no custom units):**
+    - Tailscale KB 1019 says to set forwarding in that sysctl file and to "ensure your firewall denies traffic forwarding by default" (ufw/firewalld). Docker's iptables-backend docs: DROP only when Docker enables forwarding; DROP is recommended unless the host has to be a router. The nftables backend is experimental and doesn't support Swarm.
+    - So I enabled Ubuntu's **ufw** on nuc8-2: `default deny routed`, with `allow incoming` and `allow outgoing` so INPUT/OUTPUT behaviour is unchanged. ufw's sysctl.conf only sets values the host already had.
+    - Result: FORWARD policy DROP (IPv6 too), chain order DOCKER-USER → DOCKER-FORWARD → ts-forward → ufw.
+    - **Probe:** nuc8-1 sent one crafted TCP SYN to 1.1.1.1:443, addressed to nuc8-2's MAC. Before ufw it was forwarded; after ufw it's logged `[UFW BLOCK] IN=eno1 OUT=eno1` and dropped.
+    - **Rebooted again to verify** (kernel 6.8.0-149). ufw active; tailscaled active; online; `192.168.0.0/24` primary; key expiry off; `ip_forward=1`; all 10 containers up. Swarm ingress via nuc8-2 OK (threadfin 200, mosquitto and tesla-proxy TCP), overlay sonarr→prowlarr OK, AdGuard .253/.254 OK. Only 1 `UFW BLOCK` this boot (the probe). The PS5 at .180 answers ping and 9302 (`200 Ok`, awake).
+    - The stock ufw forward rules still let through RELATED/ESTABLISHED, ICMP errors and echo-request. `setup.sh` now includes this as step 4.
+    - **Not yet re-proven end to end:** Tailscale client → LAN after the change. No client was connected; the Pixel has been offline since the 11-22 cellular test.
   - PS5-177 (.180) answers ping and port 9302 (`620 Server Standby`).
 
 ## 2026-11-21 (HA: Bedside Lamp → Elijah's Room; Holden's remote Brown Noise re-pinned)

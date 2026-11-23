@@ -97,7 +97,7 @@ After every `docker-compose -f media.yaml config | docker stack deploy -c - medi
 ### Tailscale subnet router (nuc8-2)
 
 - Runs on the **nuc8-2 host** (apt package + systemd), not in swarm. The runbook, admin-console steps, verify checklist and rollback are in `tailscale/README.md`; `tailscale/setup.sh` is idempotent.
-- "Can't reach home over Tailscale" → check in this order: `tailscale status` on nuc8-2 (logged in? key expired?); the route approved in the admin console; the client accepting routes (Linux/Steam Deck needs `--accept-routes`); `sudo iptables -S ts-forward` exists (Docker's FORWARD policy is DROP); a remote network also on 192.168.0.0/24 (clash).
+- "Can't reach home over Tailscale" → check in this order: `tailscale status` on nuc8-2 (logged in? key expired?); the route approved in the admin console; the client accepting routes (Linux/Steam Deck needs `--accept-routes`); `sudo iptables -S ts-forward` exists. Forwarding is default-deny through **ufw** (`deny routed`), not Docker: Docker skips setting DROP because the sysctl file enables forwarding first. To allow a new forwarded flow, add a `ufw route allow` rule; don't flip the policy; a remote network also on 192.168.0.0/24 (clash).
 - Remote Play: chiaki-ng can't discover PS5s over the tunnel; add them by IP (PS5-177 = 192.168.0.180).
 
 ## Infra Troubleshooting — Standing Instruction

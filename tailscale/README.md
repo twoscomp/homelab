@@ -37,7 +37,8 @@ On nuc8-2:
 ```bash
 tailscale status                        # nuc8-2 online, no "Log in at"
 sudo iptables -S ts-forward             # tailscale's FORWARD rules
-sudo iptables -S FORWARD | head -4      # FORWARD should jump to ts-forward
+sudo iptables -S FORWARD                # policy DROP; DOCKER-USER, DOCKER-FORWARD, ts-forward, then ufw chains
+sudo ufw status verbose                 # Default: allow (incoming), allow (outgoing), deny (routed)
 ```
 Then, from a remote device on cellular:
 1. Run `tailscale ping nuc8-2`. It should say direct, not "via DERP". If it stays on DERP, add a UDP 41641 port forward on the UDM → 192.168.0.26.
@@ -50,7 +51,12 @@ Then, from a remote device on cellular:
 - **`tailscale netcheck` run as a normal user reports `UDP: false` and no DERP latency. It's wrong; ignore it.** Run `sudo tailscale netcheck`, or read the daemon's view: `journalctl -u tailscaled | grep NetInfo` (`udp=true portmap=active-UMC`).
 - **PS5-177** answers unicast discovery on 9302 in rest mode (`620 Server Standby`). That's the port chiaki-ng's wake uses. TCP 9295 is refused while it's in standby, which is normal.
 
-- **FORWARD policy after a reboot (2026-11-23):** the sysctl file turns on forwarding before Docker starts, so Docker no longer sets the FORWARD policy to DROP. It boots as ACCEPT. Tailscale works either way; restoring default-deny is pending (see ops-log 2026-11-22).
+- **Default-deny forwarding uses ufw (2026-11-23).** `setup.sh` step 4 runs `ufw default deny routed`, with incoming and outgoing left at allow.
+  - Why it's needed: the docs line up. Tailscale (KB 1019 Subnet routers) says to turn on forwarding with `/etc/sysctl.d/99-tailscale.conf` and to make sure the firewall denies forwarding by default (it names ufw and firewalld). Docker (packet filtering docs, iptables backend) only sets FORWARD to DROP when Docker turns `ip_forward` on itself. The sysctl file does that first, so the host firewall has to supply the DROP. Docker's nftables backend is experimental and doesn't work in Swarm mode, so it isn't an option.
+  - Resulting FORWARD order: policy DROP → DOCKER-USER → DOCKER-FORWARD → ts-forward → ufw chains.
+  - ufw's stock forward rules also allow RELATED/ESTABLISHED and ICMP errors plus echo-request. Everything else is logged as `[UFW BLOCK]` and dropped.
+  - Verified across a reboot. A crafted SYN from nuc8-1 (to 1.1.1.1:443, sent to nuc8-2's MAC) was forwarded before ufw and is blocked after. Swarm ingress (threadfin, mosquitto, tesla-proxy), overlay traffic and AdGuard all still work.
+  - IPv6 forwarding stays off (Tailscale's doc also shows the v6 line). The only IPv4 route is needed, and the LAN has no IPv6.
 
 ## Clients
 
@@ -68,6 +74,6 @@ Then, from a remote device on cellular:
 ## Rollback
 
 ```bash
-ssh nuc8-2 'sudo tailscale down; sudo systemctl disable --now tailscale-gro; sudo rm /etc/systemd/system/tailscale-gro.service /etc/sysctl.d/99-tailscale.conf; sudo apt-get remove -y tailscale'
+ssh nuc8-2 'sudo tailscale down; sudo systemctl disable --now tailscale-gro; sudo ufw --force disable; sudo rm /etc/systemd/system/tailscale-gro.service /etc/sysctl.d/99-tailscale.conf; sudo apt-get remove -y tailscale'
 ```
 Then delete the machine in the admin console. Keep `net.ipv4.ip_forward` at 1: Docker needs it.
