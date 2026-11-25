@@ -3,6 +3,26 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-24 (HA: upstairs humidifier follows the average of the 3 upstairs bedrooms; fail-safes)
+
+Elijah moved upstairs (old guest room), so the upstairs humidifier now uses all three upstairs bedrooms. Before, `sensor.upstairs_driest_humidity` = min(game room, Holden's). The game room always reads wetter, so in practice only Holden's room was used.
+- **`templates/humidity.yaml`:** new `sensor.upstairs_bedrooms_humidity` "Upstairs Bedrooms Humidity" = the average of Holden's (`baby_tuya`), Elijah's (`elijah_tuya`) and the Guest Room (`guest_tuya`). Needs 2 of the 3, otherwise unavailable. Replaces `sensor.upstairs_driest_humidity`; its orphaned registry entry was removed after nothing referenced it any more.
+  - Why an average and not the driest room: the guest room (old study) is the driest and slowest to respond. On 11-18 it went 40.5 → 44.1% while Elijah's went 43.9 → 47.7%. With the driest room in charge, the guest room would keep the humidifier pinned against the game-room cap.
+- **`automation.humidifier_keep_upstairs_comfortable`** (id `upstairs_humidifier`). The game room is now only the cap:
+  - On: bedroom average < target − 3 **and** game room < target + 2. Off: average ≥ target **or** game room ≥ target + 5. Same thresholds as before.
+  - **Fail-safes (new):** off once the bedroom average or `sensor.game_tuya_humidity` has been unavailable/unknown for 2 min, and it never turns on without both. Before, an unavailable game sensor read as 0%, so there was no cap at all. If the driest-room input went unavailable, the automation did nothing and left the plug on. A `settling` variable plus a `for: 2 min` trigger ignore shorter blips such as a template reload.
+  - Does nothing while `sensor.humidity_target` is unavailable. **Pre-existing bug found while testing:** the automation read an unavailable target as 40%. The template reload for this change made the target unavailable for 15 ms (02:22:47 UTC), and the old automation turned the humidifier off: driest 42.6% ≥ "40%". Fixed here; I turned the plug back on by hand to restore its state.
+  - **Same bug still open in `automation.humidifier_keep_master_bedroom_comfortable`** (`| float(40)` on the target): any template reload or start-up can turn the bedroom humidifier off if the room is ≥ 40%. Not changed (outside this request).
+- **Tested:**
+  - Manual run held the plug on (trace: target 45, average 43.4, game 48.07, not settling; neither branch fired).
+  - 9-case matrix through HA's template engine: in band, average at target, game at cap, dry → on, dry but game 47, average unavailable, game unavailable, cold tier, 2-of-3 average. Plus the 2-of-3 availability rule. All as intended.
+  - `ha core check` clean; no log errors.
+- **Dashboards (both):**
+  - The four humidifier cards (Climate + Game Room) now read "On · target 45%, bedrooms 43%, game room 48%".
+  - "Upstairs Humidity vs Target" plots Holden's, Elijah's, Guest Room, Game Room and Target.
+  - Edited live (the generator doesn't contain these cards). Checked in Chrome.
+- Backups `*.bak-20261124-humidavg`: `templates/humidity.yaml`, `automations.yaml`, `.storage/core.entity_registry`, `.storage/lovelace.{home_dashboard,mushroom_mushroom}`.
+
 ## 2026-11-22 (Tailscale subnet router on nuc8-2 — live 192.168.0.0/24)
 
 Goal: remote devices (Steam Deck, phone) reach the home LAN `192.168.0.0/24`, including the PS5s for chiaki-ng Remote Play and wake. Host choice and full runbook: `tailscale/README.md`.
