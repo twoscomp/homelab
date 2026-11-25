@@ -21,6 +21,8 @@ Elijah moved upstairs (old guest room), so the upstairs humidifier now uses all 
   - The four humidifier cards (Climate + Game Room) now read "On · target 45%, bedrooms 43%, game room 48%".
   - "Upstairs Humidity vs Target" plots Holden's, Elijah's, Guest Room, Game Room and Target.
   - Edited live (the generator doesn't contain these cards). Checked in Chrome.
+  - **Follow-up (same evening, the user: "the humidities are stacked"):** the graph showed a big value plus four unlabeled values stacked on the right, and the legend wrapped. It now matches the Bedroom graph: big value = bedroom average (`sensor.upstairs_bedrooms_humidity`, no line/legend, as the first entity), the target on the right, and the rooms as lines only (`show_state: false`). Legend: Holden / Elijah / Guest / Game on one row (Target dropped from the legend; the title says "vs Target"). Checked both dashboards' Climate views, plus the Game Room view/pop-up cards (one line each), in Chrome. Backups `lovelace.*.bak-20261124-humidgraph`.
+  - The 02:30 UTC scheduled run (first non-manual run of the new automation) held the plug on, as expected.
 - Backups `*.bak-20261124-humidavg`: `templates/humidity.yaml`, `automations.yaml`, `.storage/core.entity_registry`, `.storage/lovelace.{home_dashboard,mushroom_mushroom}`.
 
 ## 2026-11-22 (Tailscale subnet router on nuc8-2 — live 192.168.0.0/24)
