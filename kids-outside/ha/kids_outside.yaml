@@ -1,0 +1,232 @@
+# "Are the kids outside?" — Home Assistant side of the neighbor status page.
+# Install: /config/packages/kids_outside.yaml, with in configuration.yaml
+#   homeassistant:
+#     packages: !include_dir_named packages
+# secrets.yaml needs:
+#   kids_status_url: https://<app>.fly.dev/api/status
+#   kids_status_auth: "Bearer <PUSH_TOKEN>"
+# Phone notifications go to notify.mobile_app_pixel_10a (Daniel's Pixel 10a).
+
+input_boolean:
+  kids_outside:
+    name: Kids outside
+    icon: mdi:human-child
+
+timer:
+  kids_outside_auto_off:
+    name: Kids outside auto-off
+    duration: "01:30:00"
+    restore: true
+
+rest_command:
+  kids_status_push:
+    url: !secret kids_status_url
+    method: POST
+    headers:
+      Authorization: !secret kids_status_auth
+    content_type: application/json
+    timeout: 10
+    payload: >-
+      {% set f = state_attr('timer.kids_outside_auto_off', 'finishes_at') %}
+      {{ {'outside': is_state('input_boolean.kids_outside', 'on'),
+          'expires_at': (as_timestamp(f, 0) | int(0)) if is_state('timer.kids_outside_auto_off', 'active') else 0}
+         | to_json }}
+
+automation:
+  - id: kids_outside_on
+    alias: Kids outside - on (start timer, or refuse after dark)
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.kids_outside
+        from: "off"
+        to: "on"
+    actions:
+      - if:
+          - condition: or
+            conditions:
+              - condition: sun
+                after: sunset
+                after_offset: "00:30:00"
+              - condition: sun
+                before: sunrise
+        then:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.kids_outside
+          - action: notify.mobile_app_pixel_10a
+            data:
+              title: Kids outside
+              message: It's after dark, so "Kids outside" was switched back off.
+              data:
+                tag: kids_outside_notice
+        else:
+          - action: timer.start
+            target:
+              entity_id: timer.kids_outside_auto_off
+            data:
+              duration: "01:30:00"
+
+  - id: kids_outside_off
+    alias: Kids outside - off (cancel timer, clear reminder)
+    mode: queued
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.kids_outside
+        from: "on"
+        to: "off"
+    actions:
+      - action: timer.cancel
+        target:
+          entity_id: timer.kids_outside_auto_off
+      - action: notify.mobile_app_pixel_10a
+        data:
+          message: clear_notification
+          data:
+            tag: kids_outside_reminder
+
+  - id: kids_outside_reminder
+    alias: Kids outside - reminder 10 min before auto-off
+    mode: single
+    triggers:
+      - trigger: template
+        value_template: >-
+          {% set f = state_attr('timer.kids_outside_auto_off', 'finishes_at') %}
+          {{ is_state('timer.kids_outside_auto_off', 'active') and f is not none
+             and now() >= as_datetime(f) - timedelta(minutes=10) }}
+    conditions:
+      - condition: state
+        entity_id: input_boolean.kids_outside
+        state: "on"
+    actions:
+      - action: notify.mobile_app_pixel_10a
+        data:
+          title: Kids outside
+          message: The neighbors' page switches to "not right now" in about 10 minutes.
+          data:
+            tag: kids_outside_reminder
+            actions:
+              - action: KIDS_OUTSIDE_EXTEND
+                title: 30 more minutes
+              - action: KIDS_OUTSIDE_OFF
+                title: Turn off now
+
+  - id: kids_outside_reminder_action
+    alias: Kids outside - reminder buttons
+    mode: queued
+    triggers:
+      - trigger: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: KIDS_OUTSIDE_EXTEND
+        id: extend
+      - trigger: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: KIDS_OUTSIDE_OFF
+        id: "off"
+    actions:
+      - choose:
+          - conditions:
+              - condition: trigger
+                id: extend
+              - condition: state
+                entity_id: input_boolean.kids_outside
+                state: "on"
+            sequence:
+              - action: timer.start
+                target:
+                  entity_id: timer.kids_outside_auto_off
+                data:
+                  duration: "00:30:00"
+          - conditions:
+              - condition: trigger
+                id: "off"
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.kids_outside
+
+  - id: kids_outside_timer_finished
+    alias: Kids outside - timer ended, turn off
+    mode: queued
+    triggers:
+      - trigger: event
+        event_type: timer.finished
+        event_data:
+          entity_id: timer.kids_outside_auto_off
+    conditions:
+      - condition: state
+        entity_id: input_boolean.kids_outside
+        state: "on"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.kids_outside
+      - action: notify.mobile_app_pixel_10a
+        data:
+          title: Kids outside
+          message: Timer ended, so "Kids outside" is off. The neighbors' page now says not right now.
+          data:
+            tag: kids_outside_notice
+
+  - id: kids_outside_sunset_off
+    alias: Kids outside - off 30 min after sunset
+    mode: single
+    triggers:
+      - trigger: sun
+        event: sunset
+        offset: "00:30:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.kids_outside
+        state: "on"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.kids_outside
+      - action: notify.mobile_app_pixel_10a
+        data:
+          title: Kids outside
+          message: It's getting dark, so "Kids outside" is off.
+          data:
+            tag: kids_outside_notice
+
+  - id: kids_outside_startup
+    alias: Kids outside - on HA start, off unless the timer is running
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+    conditions:
+      - condition: state
+        entity_id: input_boolean.kids_outside
+        state: "on"
+      - condition: not
+        conditions:
+          - condition: state
+            entity_id: timer.kids_outside_auto_off
+            state: active
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.kids_outside
+
+  - id: kids_outside_push
+    alias: Kids outside - push status to the neighbors' page
+    mode: queued
+    max: 5
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.kids_outside
+        not_to: [unavailable, unknown]
+      - trigger: state
+        entity_id: timer.kids_outside_auto_off
+        attribute: finishes_at
+      - trigger: time_pattern
+        minutes: /5
+      - trigger: homeassistant
+        event: start
+    actions:
+      - action: rest_command.kids_status_push
+        continue_on_error: true

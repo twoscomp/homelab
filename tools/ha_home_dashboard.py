@@ -159,7 +159,12 @@ pills = {
     ],
     **full,
 }
-right_now = {"type": "grid", "cards": [heading("Right now", "mdi:clock-outline"), pills]}
+# Neighbor status page toggle (kids-outside/ in this repo); shared, so it lives here rather than in Favorites.
+kids_outside = {"type": "tile", "entity": "input_boolean.kids_outside", "name": "Kids outside",
+                "icon": "mdi:human-child", "state_content": ["state", "last_changed"],
+                "tap_action": {"action": "toggle"}, "icon_tap_action": {"action": "toggle"},
+                "hold_action": {"action": "more-info"}, **full}
+right_now = {"type": "grid", "cards": [heading("Right now", "mdi:clock-outline"), pills, kids_outside]}
 
 # "#lights" pop-up: what's on, tap to turn off, plus All lights off
 lights_on = {

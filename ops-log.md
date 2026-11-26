@@ -3,6 +3,18 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-26 (Kids-outside neighbor status page — Fly app + HA package)
+
+New public page for the neighbors: **https://kids-outside.fly.dev**, which answers "are the kids outside?" (YES / NOT RIGHT NOW / NOT SURE) plus local weather. Code, runbook and rules in `kids-outside/README.md`.
+- **Fly:** app `kids-outside`, Daniel's personal org, dfw, one always-on shared-cpu-1x 256 MB machine (`--ha=false`), `/healthz` check 1/1. Secrets `PUSH_TOKEN`, `WEATHER_LAT`, `WEATHER_LON` (rounded to 1 decimal) set with `fly secrets import`, never echoed and not in git. flyctl had been logged out; Daniel re-approved `flyctl auth login` in the browser (this also restores flyctl access to `dlin-uptime-kuma`).
+  - First deploy printed "Failed to provision IP addresses" (`org_slug is only supported with private_v6 type`). Fixed with `fly ips allocate-v4 --shared` + `fly ips allocate-v6`.
+- **HA (HAOS VM):** packages enabled for the first time: `homeassistant: packages: !include_dir_named packages` in `configuration.yaml`, new `/config/packages/kids_outside.yaml` (copy of `kids-outside/ha/kids_outside.yaml`). `secrets.yaml` gained `kids_status_url` and `kids_status_auth`. Backups `configuration.yaml.bak-20261126-kidsoutside`, `secrets.yaml.bak-20261126-kidsoutside`, `.storage/lovelace.home_dashboard.bak-20261126-kidsoutside`.
+  - One Core restart at ~20:00 UTC: `rest_command` wasn't loaded before, so it had no reload service. `ha core check` was clean first.
+  - `input_boolean.kids_outside` + `timer.kids_outside_auto_off` (1:30, restore), 8 automations `kids_outside_*` (reminder with 30 more minutes / Turn off now, timer end, sunset + 30 off, after-dark refusal, start-up off, push on every change + every 5 min). Notifications go to `notify.mobile_app_pixel_10a`.
+  - Home dashboard: full-width "Kids outside" toggle tile under the Right now pills (live edit + `tools/ha_home_dashboard.py`).
+- **Verified:** startup push → page `inside`; toggle on → timer active, page **YES.** "Last updated just now, at 2:01 pm"; toggle off → timer idle, page **NOT RIGHT NOW.**; no HA log errors. The reminder and payload templates were checked through HA's template API (the after-dark and reminder paths can't fire at 2 pm).
+- Locally before deploy: 28 endpoint checks (auth, 512 B limit, validation, page states, CSP/no-store/noindex, CORS, weather), fake-clock checks of the 15-min stale / default-expiry rules, podman image build (non-root, healthcheck command).
+
 ## 2026-11-25 (HA: master bedroom humidifier — no action while the humidity target is unavailable)
 
 - Fixes the reload bug noted on 11-24, the same way as upstairs (bfa87b1). `automation.humidifier_keep_master_bedroom_comfortable` (id `bedroom_humidifier`) read an unavailable `sensor.humidity_target` as 40% (`| float(40)`). A template reload or start-up could then turn the plug off if the bedroom was ≥ 40%.

@@ -1,0 +1,12 @@
+# Local run: put PUSH_TOKEN / WEATHER_LAT / WEATHER_LON in kids-outside/.env (gitignored), then
+#   docker compose up --build   (or podman compose)
+services:
+  kids-outside:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PUSH_TOKEN: ${PUSH_TOKEN:?set PUSH_TOKEN in .env}
+      WEATHER_LAT: ${WEATHER_LAT:-}
+      WEATHER_LON: ${WEATHER_LON:-}
+    restart: unless-stopped

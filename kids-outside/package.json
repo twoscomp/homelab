@@ -1,0 +1,14 @@
+{
+  "name": "kids-outside",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Neighbor-facing \"are the kids outside?\" status page, pushed from Home Assistant",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "UNLICENSED"
+}
