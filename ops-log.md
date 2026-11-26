@@ -8,7 +8,7 @@ See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 - Fly can't rename apps, so: new app `kidsoutside` (same fly.toml, dfw, 1 machine, `--ha=false`), **fresh** `PUSH_TOKEN` + weather secrets via `fly secrets import`, deployed; the old `kids-outside` app was destroyed (old link is dead). Same IP-provisioning error on first deploy → `fly ips allocate-v4 --shared` + `allocate-v6`.
 - HA: `secrets.yaml` `kids_status_url`/`kids_status_auth` swapped over stdin (backup `secrets.yaml.bak-20261126-rename`), `rest_command.reload`, no restart.
 - Verified: push → `inside`; toggle on → **YES.** 3:08 pm; off → **NOT RIGHT NOW.**, timer idle; no HA log errors.
-- Gotcha: checking a fly.dev name's availability with a DNS lookup gets the "doesn't exist" answer cached on the LAN resolver for a while after the app is created. HA resolved it fine; test from the laptop with `curl --resolve <name>:443:<ip>`.
+- Gotcha: checking a fly.dev name's availability with a DNS lookup *before* creating the app poisons upstream caches. **Quad9** (one of AdGuard's 3 DoH upstreams) kept the NXDOMAIN for the full 1 h SOA TTL (Cloudflare/Google didn't), so AdGuard on .253 kept re-fetching it; restarting `adguard` on nuc8-1 (~21:15 UTC) didn't help. .254 and HA happened to get good answers. It expires on its own ~22:05 UTC. Next time, check names with `fly apps create` (fails if taken), not DNS.
 
 ## 2026-11-26 (Kids-outside page redesign + home-screen icon)
 
