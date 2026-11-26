@@ -14,10 +14,11 @@ Node 22, no dependencies, state in memory only (a restart shows NOT SURE until t
 
 | Route | |
 |---|---|
-| `GET /` | The page. Refreshes every 60 s; `noindex`, strict CSP, `no-store`. |
+| `GET /` | The page. Refreshes every 60 s; `noindex`, strict CSP (`img-src data: 'self'`, `manifest-src 'self'`), `no-store`. |
 | `GET /api/status` | Public, CORS `*`: `{"outside": true\|false\|null, "state": "outside\|inside\|unknown", "updated_at": ISO\|null}` |
 | `POST /api/status` | `Authorization: Bearer $PUSH_TOKEN` (timing-safe), body ≤ 512 B: `{"outside": bool, "expires_at": unix}` |
 | `GET /healthz` | Fly health check. |
+| `GET /apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png`, `/site.webmanifest` | Home-screen icon and manifest (label "Kids outside?"). |
 
 Rules:
 - **unknown** if there has been no push, or the last one is more than 15 minutes old.
@@ -25,8 +26,20 @@ Rules:
   if it's in the future, otherwise now + 15 min, and never more than now + 4 h.
 - **inside** otherwise.
 
+Page design: each state has its own color, inline SVG icon and favicon so it reads without the words and
+without relying on color (YES = green, ball under a sun, gently bounces 3 times unless reduced motion is on;
+NOT RIGHT NOW = blue, house; NOT SURE = gray, question mark). The tab title starts with the answer;
+`og:title` stays generic so a link preview in a text thread never freezes an old answer. Light and dark
+themes; all text is WCAG AAA contrast.
+
+Home-screen icon: a beach ball on the lawn under the sun, drawn per pixel in `iconColor()` and PNG-encoded with
+`node:zlib` at startup (about 0.5 s; 180, 192 and 512 px). No image files. The ball and sun sit inside
+Android's maskable safe zone; iOS rounds the corners itself. `apple-mobile-web-app-title` and the manifest's
+`short_name` keep the home-screen label fixed, since the tab title changes with the answer.
+
 Weather comes from Open-Meteo (no key), cached 10 minutes, for `WEATHER_LAT`/`WEATHER_LON` rounded to one
-decimal (~10 km). Rain chance shows only at 20%+, UV only at 6+.
+decimal (~10 km). Rain chance shows only at 20%+, UV only at 6+ (both in amber). A Daylight row shows
+"Sunset in 1 h 20 min (5:21 pm)", then "Getting dark" / "Dark out" after sunset and before sunrise.
 
 Environment (all via `fly secrets`, never in git):
 

@@ -3,6 +3,14 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-26 (Kids-outside page redesign + home-screen icon)
+
+- Redesign by a UI/UX review agent, checked and deployed (`fly deploy --ha=false`, still 1 machine): per-state colour + inline SVG icon (ball/sun, house, ?), state in the tab title and favicon, weather card with a Daylight row (sunset countdown), AAA contrast, 3-hop ball animation off under reduced motion. Still no JS and no outside requests; page ~5.4 KB.
+- Home-screen icon: beach ball on a lawn under the sun, rendered per pixel and PNG-encoded with `node:zlib` at startup (`/apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png`, `/site.webmanifest`, label "Kids outside?"). CSP gained `img-src 'self'` and `manifest-src 'self'`.
+- Copy: NOT SURE no longer suggests texting the family (Daniel's request).
+- Verified: 28/28 endpoint tests, fake-clock unit test, CSP style hash matches; live page, icons and manifest all 200; HA push right after deploy → `inside`.
+- Domain: shopped, not bought. Recommendation `arethekidsoutside.com` at Cloudflare Registrar (~$11.17/yr); no CloudFront.
+
 ## 2026-11-26 (Kids-outside neighbor status page — Fly app + HA package)
 
 New public page for the neighbors: **https://kids-outside.fly.dev**, which answers "are the kids outside?" (YES / NOT RIGHT NOW / NOT SURE) plus local weather. Code, runbook and rules in `kids-outside/README.md`.
