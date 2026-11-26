@@ -3,6 +3,15 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-25 (HA: master bedroom humidifier — no action while the humidity target is unavailable)
+
+- Fixes the reload bug noted on 11-24, the same way as upstairs (bfa87b1). `automation.humidifier_keep_master_bedroom_comfortable` (id `bedroom_humidifier`) read an unavailable `sensor.humidity_target` as 40% (`| float(40)`). A template reload or start-up could then turn the plug off if the bedroom was ≥ 40%.
+- **Change (only this):** the precondition also requires `is_number(states('sensor.humidity_target'))`, and the target variable is `| float` with no 40% fallback. Thresholds, triggers, description and the bedroom refill reminder are unchanged. Backup `automations.yaml.bak-20261125-bedtarget`.
+- **Verified:** `ha core check` clean; automations reloaded; then a template reload (the event that triggers the bug) at 04:37:21 UTC.
+  - The run triggered by the target going `unavailable` stopped at the precondition: no action.
+  - The next run, when the target came back, used the real 40% target (bedroom 44.21%).
+- **The plug was off throughout, and correctly so:** the target dropped 45 → 40% at 04:26 UTC as it got colder, and the bedroom was at 44%. So "stays on through a reload" couldn't be shown live. The bug path was confirmed fixed via the trace instead. With the plug on and the bedroom above target, the follow-up run would turn it off, and that would be correct, not the bug.
+
 ## 2026-11-24 (HA: upstairs humidifier follows the average of the 3 upstairs bedrooms; fail-safes)
 
 Elijah moved upstairs (old guest room), so the upstairs humidifier now uses all three upstairs bedrooms. Before, `sensor.upstairs_driest_humidity` = min(game room, Holden's). The game room always reads wetter, so in practice only Holden's room was used.
