@@ -1,5 +1,5 @@
 # Secrets (fly secrets set): PUSH_TOKEN, WEATHER_LAT, WEATHER_LON. Never put them here.
-app = "kids-outside"
+app = "kidsoutside"
 primary_region = "dfw"
 
 [build]

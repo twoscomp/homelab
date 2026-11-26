@@ -50,7 +50,7 @@ Environment (all via `fly secrets`, never in git):
 
 ## Deploy (Fly.io)
 
-Live at **https://kids-outside.fly.dev** (app `kids-outside`, Daniel's personal org, region dfw, one
+Live at **https://kidsoutside.fly.dev** (app `kidsoutside`, Daniel's personal org, region dfw, one
 always-on shared-cpu-1x 256 MB machine, ~$2/month; shared IPv4 + IPv6). No custom domain yet.
 
 First time (from this folder):
