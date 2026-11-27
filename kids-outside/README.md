@@ -79,7 +79,7 @@ Installed as a package on the HAOS VM: `/config/packages/kids_outside.yaml`, loa
 - `input_boolean.kids_outside`: the toggle (tile on the Home dashboard).
 - Turning it on starts `timer.kids_outside_auto_off` (1:30, survives restarts). Turning it on between
   sunset + 30 min and sunrise flips it straight back off with a phone notice.
-- 10 minutes before the timer ends, the phone gets a reminder with **30 more minutes** (restarts the timer
+- 10 minutes before the timer ends, both parents' phones get a reminder with **30 more minutes** (restarts the timer
   at 0:30) and **Turn off now**.
 - Timer end turns it off and notifies; it also turns off at sunset + 30 min.
 - On HA start it turns off unless the timer is still running.
@@ -87,7 +87,9 @@ Installed as a package on the HAOS VM: `/config/packages/kids_outside.yaml`, loa
   minutes and at HA start. The pushed `expires_at` is the timer's end, so the page drops to NOT RIGHT NOW
   on time even if HA goes quiet, and to NOT SURE 15 minutes after the last push.
 
-Notifications go to `notify.mobile_app_pixel_10a`; change it there if the phone changes.
-After editing: Developer tools → YAML → check config, then reload Input booleans, Timers, REST commands and
+Notifications go to both phones through `script.kids_outside_notify` (Daniel's Pixel 10a
+`notify.mobile_app_pixel_10a`, Angie's Galaxy Z Flip `notify.mobile_app_sm_f741u1`); change them there if a phone
+changes. Either phone's buttons work, and acting on one (or turning the toggle off) clears the reminder on both.
+After editing: Developer tools → YAML → check config, then reload Input booleans, Timers, REST commands, Scripts and
 Automations. No restart needed for edits; the first install needed one restart because `rest_command` wasn't
 loaded before, so it had no reload service.

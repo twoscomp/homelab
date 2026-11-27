@@ -393,6 +393,27 @@ for r in ROOMS:
         "button_type": "name",
         "cards": rewrite_nav(out, True),
     })
+# Office: Daniel's desktop. Tap sends the Wake-on-LAN packet (button.desktop_pc); the state comes from ping
+# (binary_sensor.ping_desktop), since UniFi keeps a sleeping wired PC "connected" for days.
+desktop_card = {
+    "type": "conditional", "conditions": [{"condition": "user", "users": [DANIEL]}],
+    "card": {
+        "type": "custom:mushroom-template-card", "entity": "binary_sensor.ping_desktop", "primary": "Desktop PC",
+        "secondary": "{% set p = states('button.desktop_pc') | as_datetime(none) %}"
+                     "{% if is_state('binary_sensor.ping_desktop', 'on') %}On"
+                     "{% elif p and now() - p < timedelta(minutes=3) %}Waking…"
+                     "{% else %}Off · tap to wake{% endif %}",
+        "icon": "mdi:desktop-tower-monitor",
+        "color": "{% set p = states('button.desktop_pc') | as_datetime(none) %}"
+                 "{{ 'green' if is_state('binary_sensor.ping_desktop', 'on') else"
+                 " ('amber' if p and now() - p < timedelta(minutes=3) else '') }}",
+        "tap_action": {"action": "perform-action", "perform_action": "button.press", "target": {"entity_id": "button.desktop_pc"}},
+        "hold_action": {"action": "more-info"}, "fill_container": True},
+    "grid_options": {"columns": 12}}
+for pu in popups:
+    if pu["hash"] == "#office":
+        fan = next(i for i, c in enumerate(pu["cards"]) if c.get("entity") == "fan.ceiling_fan")
+        pu["cards"].insert(fan + 1, desktop_card)
 popup_section = {"type": "grid", "cards": popups + [lights_popup]}
 
 home = {

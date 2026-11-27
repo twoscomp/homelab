@@ -3,6 +3,11 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-27 (Kids-outside notices to both phones; Desktop PC wake button on Home)
+
+- **Kids outside:** new `script.kids_outside_notify` in the package sends to Daniel's Pixel 10a and Angie's Z Flip (`notify.mobile_app_sm_f741u1`), each with `continue_on_error`. All 5 notify calls go through it. Tapping "30 more minutes" on either phone now also clears the reminder on the other; "Turn off now" already did that through the off automation. HAOS backup `/config/kids_outside.yaml.bak-20261127-bothphones`; check_config valid; script + automation reload, no restart. Verified with a silent `clear_notification` run: both notify calls ran without errors (no audible test at 2 am).
+- **Desktop PC (Wake on LAN):** `button.desktop_pc` came from the `wake_on_lan` entry Daniel added (MAC 30:56:0f:44:41:43, dlin-desktop, 192.168.0.99). UniFi showed it `home` for 10 straight days, so it can't tell on from asleep. Added a ping entry for 192.168.0.99 → `binary_sensor.ping_desktop` ("Desktop PC"), registry backup `core.entity_registry.bak-20261127-desktop`. Home dashboard → Office pop-up: Daniel-only card under the ceiling fan. It shows On / Waking… (3 min after a press) / Off · tap to wake, and a tap presses the button (live edit, backup `lovelace.home_dashboard.bak-20261127-desktop`, + `tools/ha_home_dashboard.py`). The host has NetworkManager `wake-on-lan magic` on eno1; wake from full shutdown also depends on the BIOS and is untested.
+
 ## 2026-11-26 (Kids-outside page moved to kidsoutside.fly.dev)
 
 - Fly can't rename apps, so: new app `kidsoutside` (same fly.toml, dfw, 1 machine, `--ha=false`), **fresh** `PUSH_TOKEN` + weather secrets via `fly secrets import`, deployed; the old `kids-outside` app was destroyed (old link is dead). Same IP-provisioning error on first deploy → `fly ips allocate-v4 --shared` + `allocate-v6`.

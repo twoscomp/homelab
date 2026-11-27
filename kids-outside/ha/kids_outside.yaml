@@ -5,7 +5,9 @@
 # secrets.yaml needs:
 #   kids_status_url: https://<app>.fly.dev/api/status
 #   kids_status_auth: "Bearer <PUSH_TOKEN>"
-# Phone notifications go to notify.mobile_app_pixel_10a (Daniel's Pixel 10a).
+# Phone notifications go to both parents through script.kids_outside_notify: Daniel's Pixel 10a
+# (notify.mobile_app_pixel_10a) and Angie's Galaxy Z Flip (notify.mobile_app_sm_f741u1). Either phone's
+# reminder buttons work, and acting on one clears the reminder on the other.
 
 input_boolean:
   kids_outside:
@@ -32,6 +34,29 @@ rest_command:
           'expires_at': (as_timestamp(f, 0) | int(0)) if is_state('timer.kids_outside_auto_off', 'active') else 0}
          | to_json }}
 
+script:
+  kids_outside_notify:
+    alias: Kids outside - notify both phones
+    mode: parallel
+    max: 10
+    fields:
+      message: {description: 'Text, or "clear_notification" to remove the notification with this tag'}
+      tag: {description: Notification tag (kids_outside_reminder or kids_outside_notice)}
+      actions: {description: Optional actionable-notification buttons}
+    sequence:
+      - parallel:
+          - action: notify.mobile_app_pixel_10a
+            continue_on_error: true
+            data: &kids_note
+              title: Kids outside
+              message: "{{ message }}"
+              data:
+                tag: "{{ tag }}"
+                actions: "{{ actions | default([]) }}"
+          - action: notify.mobile_app_sm_f741u1
+            continue_on_error: true
+            data: *kids_note
+
 automation:
   - id: kids_outside_on
     alias: Kids outside - on (start timer, or refuse after dark)
@@ -54,12 +79,10 @@ automation:
           - action: input_boolean.turn_off
             target:
               entity_id: input_boolean.kids_outside
-          - action: notify.mobile_app_pixel_10a
+          - action: script.kids_outside_notify
             data:
-              title: Kids outside
               message: It's after dark, so "Kids outside" was switched back off.
-              data:
-                tag: kids_outside_notice
+              tag: kids_outside_notice
         else:
           - action: timer.start
             target:
@@ -79,11 +102,10 @@ automation:
       - action: timer.cancel
         target:
           entity_id: timer.kids_outside_auto_off
-      - action: notify.mobile_app_pixel_10a
+      - action: script.kids_outside_notify
         data:
           message: clear_notification
-          data:
-            tag: kids_outside_reminder
+          tag: kids_outside_reminder
 
   - id: kids_outside_reminder
     alias: Kids outside - reminder 10 min before auto-off
@@ -99,17 +121,15 @@ automation:
         entity_id: input_boolean.kids_outside
         state: "on"
     actions:
-      - action: notify.mobile_app_pixel_10a
+      - action: script.kids_outside_notify
         data:
-          title: Kids outside
           message: The neighbors' page switches to "not right now" in about 10 minutes.
-          data:
-            tag: kids_outside_reminder
-            actions:
-              - action: KIDS_OUTSIDE_EXTEND
-                title: 30 more minutes
-              - action: KIDS_OUTSIDE_OFF
-                title: Turn off now
+          tag: kids_outside_reminder
+          actions:
+            - action: KIDS_OUTSIDE_EXTEND
+              title: 30 more minutes
+            - action: KIDS_OUTSIDE_OFF
+              title: Turn off now
 
   - id: kids_outside_reminder_action
     alias: Kids outside - reminder buttons
@@ -139,6 +159,10 @@ automation:
                   entity_id: timer.kids_outside_auto_off
                 data:
                   duration: "00:30:00"
+              - action: script.kids_outside_notify
+                data:
+                  message: clear_notification
+                  tag: kids_outside_reminder
           - conditions:
               - condition: trigger
                 id: "off"
@@ -163,12 +187,10 @@ automation:
       - action: input_boolean.turn_off
         target:
           entity_id: input_boolean.kids_outside
-      - action: notify.mobile_app_pixel_10a
+      - action: script.kids_outside_notify
         data:
-          title: Kids outside
           message: Timer ended, so "Kids outside" is off. The neighbors' page now says not right now.
-          data:
-            tag: kids_outside_notice
+          tag: kids_outside_notice
 
   - id: kids_outside_sunset_off
     alias: Kids outside - off 30 min after sunset
@@ -185,12 +207,10 @@ automation:
       - action: input_boolean.turn_off
         target:
           entity_id: input_boolean.kids_outside
-      - action: notify.mobile_app_pixel_10a
+      - action: script.kids_outside_notify
         data:
-          title: Kids outside
           message: It's getting dark, so "Kids outside" is off.
-          data:
-            tag: kids_outside_notice
+          tag: kids_outside_notice
 
   - id: kids_outside_startup
     alias: Kids outside - on HA start, off unless the timer is running
