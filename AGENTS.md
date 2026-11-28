@@ -52,7 +52,7 @@ ssh nuc8-1 'docker service logs <service> --since 24h --timestamps 2>&1 | grep -
 
 ### Key Patterns to Watch For
 
-- **Sunday 3 AM Central scrub** — ZFS scrub on newton pool, may cause NFS latency spikes for HTTP monitors; add a Kuma weekly maintenance window (`0 9 * * 7` UTC, 60 min) if alerts fire from this.
+- **Sunday 3 AM Central scrub** — ZFS scrub on newton pool, may cause NFS latency spikes for HTTP monitors; covered by Kuma maintenance #2 (Sun 03:00–05:00 America/Chicago); #3 covers daily 03:00–03:25 snapshots.
 - **Mass simultaneous push-monitor down** — heartbeat-pusher restart or fly.io cold start hanging the push `wget` (mitigated with `--timeout=10`, but worth checking if it recurs). See `heartbeat-pusher-investigation.md` for the full history on this.
 - **Baseline response time drift** — HTTP monitor `avg_ms` increasing over time = service or infra degradation, not noise.
 - **Push monitors showing DOWN** — check the heartbeat-pusher loop isn't hung; verify pushes are actually arriving in the Kuma DB with a `MAX(h.time)` query before assuming a real outage.

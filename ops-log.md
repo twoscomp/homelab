@@ -3,6 +3,12 @@
 Running record of ops review findings and changes. Reviewed weekly.
 See [memory/feedback_ops_review_format.md] for review process and SQL queries.
 
+## 2026-11-27 (Uptime Kuma on Fly 2.2.1 → 2.5.12; maintenance windows actually work now)
+
+- **Upgrade:** `dlin-uptime-kuma` was on 2.2.1 even though fly.toml says `louislam/uptime-kuma:2` (the image tag is resolved when you deploy, not again later). `flyctl deploy --image louislam/uptime-kuma:2.5.12` (latest stable; 3.0.0 is still beta). Before the deploy: SQLite `.backup` → `/app/data/kuma.db.bak-2.2.1-20261127`. Migration ran clean, listening in ~2 s, all 22 active monitors UP, `dlin-uptime-kuma.fly.dev` and `status.whatasave.space` (built-in cloudflared tunnel) 200.
+- **Maintenance windows were never active:** both rows (#2 Sunday ZFS Scrub, #3 Daily Snapshots) had been SQL-inserted with `strategy='recurring'`, which isn't a valid strategy, and an empty cron. Every start threw `CronPattern: invalid configuration format ('')`, and nothing was ever suppressed. Changed to `recurring-weekday` (Kuma builds the cron from start/end/weekdays), `timezone='America/Chicago'`, 03:00–05:00 Sun / 03:00–03:25 daily (the 08:00 UTC times were 3 AM only during CDT), `user_id=1` on #2. Restart: both crons generate with no errors. **Next SQL-made maintenance:** strategy must be `manual|single|cron|recurring-interval|recurring-weekday|recurring-day-of-month`.
+- **Volume:** `/app/data/error.log` had grown to 475 MB (half the 1 GB volume), mostly the cron error above + old `stat_minutely` UNIQUE noise. Trimmed it to the last 5 MB; volume 56% → 7%.
+
 ## 2026-11-27 (Kids-outside notices to both phones; Desktop PC wake button on Home)
 
 - **Kids outside:** new `script.kids_outside_notify` in the package sends to Daniel's Pixel 10a and Angie's Z Flip (`notify.mobile_app_sm_f741u1`), each with `continue_on_error`. All 5 notify calls go through it. Tapping "30 more minutes" on either phone now also clears the reminder on the other; "Turn off now" already did that through the off automation. HAOS backup `/config/kids_outside.yaml.bak-20261127-bothphones`; check_config valid; script + automation reload, no restart. Verified with a silent `clear_notification` run: both notify calls ran without errors (no audible test at 2 am).
